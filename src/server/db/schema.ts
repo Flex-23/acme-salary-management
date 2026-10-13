@@ -50,6 +50,8 @@ export const employees = pgTable(
     index("employees_country_idx").on(t.countryCode),
     index("employees_country_job_title_idx").on(t.countryCode, t.jobTitle),
     index("employees_department_idx").on(t.department),
+    // Serves "sort by hire date" in both directions, with id as the stable tiebreaker.
+    index("employees_hire_date_idx").on(t.hireDate, t.id),
     // Serves the default list order; must match the ORDER BY in the employee repository.
     index("employees_full_name_sort_idx").on(sql`lower(${t.fullName}) collate "C"`, t.id),
     index("employees_full_name_trgm_idx").using("gin", sql`${t.fullName} gin_trgm_ops`),

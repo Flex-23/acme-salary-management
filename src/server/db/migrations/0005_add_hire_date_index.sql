@@ -1,0 +1,1 @@
+CREATE INDEX "employees_hire_date_idx" ON "employees" USING btree ("hire_date","id");

@@ -86,6 +86,19 @@ describe("migrations", () => {
     expect(plan).not.toContain("Sort");
   });
 
+  it("serve the hire-date sort (both directions) from an index instead of scanning the table", async () => {
+    await ctx.client.exec("set enable_seqscan = off");
+    const plan = async (direction: "asc" | "desc") => {
+      const result = await ctx.client.query<{ "QUERY PLAN": string }>(
+        `explain select id from employees order by hire_date ${direction}, id asc limit 25`,
+      );
+      return result.rows.map((r) => r["QUERY PLAN"]).join(" ");
+    };
+    expect(await plan("asc")).toContain("employees_hire_date_idx");
+    expect(await plan("desc")).toContain("employees_hire_date_idx");
+    await ctx.client.exec("reset enable_seqscan");
+  });
+
   it("create a least-privilege app role with a statement timeout", async () => {
     const role = await ctx.client.query<{ rolcanlogin: boolean; rolbypassrls: boolean; rolsuper: boolean; rolconfig: string[] }>(
       `select rolcanlogin, rolbypassrls, rolsuper, rolconfig from pg_roles where rolname = 'salary_app'`,
