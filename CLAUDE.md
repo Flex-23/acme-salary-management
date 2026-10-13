@@ -115,6 +115,8 @@ GET    /api/health                           # app + DB check
   with correct status (400 validation, 404 not found, 409 duplicate email, 500 unexpected).
   Never leak stack traces or SQL.
 - Whitelisted sort fields only (no raw user input in SQL).
+- Every list query must use `id` as a final sort tiebreaker so paging is stable (seeded rows
+  share `created_at`).
 
 ## 6. Performance & resilience rules
 - DB client: connect via **Supabase pooler** (`DATABASE_URL`, transaction mode, port 6543)
@@ -138,6 +140,8 @@ GET    /api/health                           # app + DB check
 - **Small commits**, Conventional Commits (`feat:`, `test:`, `refactor:`, `chore:`, `docs:`),
   one logical change each. Never commit failing tests, secrets, or `.env*` (except `.env.example`).
 - Before every commit run: `npm run typecheck && npm run lint && npm test`.
+- Run `npm test` directly (never piped through grep or other tools) and check its exit code
+  before committing.
 - Keep functions small and named for intent. No `any`. No dead code or commented-out code.
 - Do **not** add dependencies beyond section 2 without asking first.
 - If a requirement is ambiguous, **stop and ask** — do not guess.
