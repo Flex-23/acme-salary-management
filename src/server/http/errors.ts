@@ -29,14 +29,21 @@ function isExpected(error: unknown): boolean {
   );
 }
 
+export type HandleErrorsOptions = {
+  /** Called first with every caught error; throw from it to let a framework-owned error escape. */
+  rethrow?: (error: unknown) => void;
+};
+
 /** Wraps a route handler so thrown errors become error responses; unexpected ones are logged server-side. */
 export function handleErrors<Args extends unknown[]>(
   handler: (...args: Args) => Promise<Response>,
+  { rethrow }: HandleErrorsOptions = {},
 ): (...args: Args) => Promise<Response> {
   return async (...args) => {
     try {
       return await handler(...args);
     } catch (error) {
+      rethrow?.(error);
       if (!isExpected(error)) console.error("Unhandled API error", error);
       return toErrorResponse(error);
     }

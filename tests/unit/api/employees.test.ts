@@ -6,7 +6,6 @@ import { fixtureId } from "../../support/fixtures";
 
 const harness = vi.hoisted(() => ({ services: undefined as Services | undefined }));
 vi.mock("@/server/container", () => ({ getServices: () => harness.services }));
-vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn(), revalidateTag: vi.fn() }));
 
 import { DELETE, GET as getOne, PATCH } from "@/app/api/employees/[id]/route";
 import { GET as list, POST } from "@/app/api/employees/route";

@@ -5,7 +5,6 @@ import { createFakeServices, get } from "../../support/api-harness";
 
 const harness = vi.hoisted(() => ({ services: undefined as Services | undefined }));
 vi.mock("@/server/container", () => ({ getServices: () => harness.services }));
-vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn(), revalidateTag: vi.fn() }));
 
 import { GET as byCountry } from "@/app/api/insights/by-country/route";
 import { GET as byDepartment } from "@/app/api/insights/by-department/route";

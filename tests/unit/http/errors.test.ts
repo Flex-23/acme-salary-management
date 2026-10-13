@@ -87,6 +87,24 @@ describe("handleErrors", () => {
     expect(log).toHaveBeenCalledWith("Unhandled API error", failure);
   });
 
+  it("lets the rethrow hook pass framework errors through untouched", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const control = new Error("framework control flow");
+    const handler = handleErrors(
+      async () => {
+        throw control;
+      },
+      {
+        rethrow: (error) => {
+          if (error === control) throw error;
+        },
+      },
+    );
+
+    await expect(handler()).rejects.toBe(control);
+    expect(log).not.toHaveBeenCalled();
+  });
+
   it("does not log expected errors", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     await handleErrors(async () => {
