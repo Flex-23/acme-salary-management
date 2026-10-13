@@ -14,7 +14,7 @@ needs one place to maintain salary records and see how the organisation pays peo
   *Done when:* required fields are validated, duplicate emails are rejected, hire date is not
   in the future, salary is > 0, and changes show up immediately.
 - **Search, filter, sort.** As HR, I can find employees by name/email and filter by country,
-  department and job title, and sort by any listed column.
+  department and job title, and sort by full name, hire date, salary (USD-normalised) or created date.
   *Done when:* it is server-side, paginated (max 100 per page) and filters survive a page reload (URL).
 - **Insights by country.** Headcount and min / max / average / median pay per country,
   in local currency and USD.
