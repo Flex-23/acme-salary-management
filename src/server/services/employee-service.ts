@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { ListEmployeesQuery, makeEmployeeSchemas } from "../domain/employee";
+import { ListEmployeesQuery, makeEmployeeSchemas, type ListEmployeesQueryData } from "../domain/employee";
 import { NotFoundError, ValidationError } from "../domain/errors";
 import type { EmployeeRepository, FilterOptions } from "../repositories/employee-repository";
 import type { Clock } from "./clock";
@@ -28,7 +28,11 @@ export class EmployeeService {
   ) {}
 
   async list(rawQuery: Record<string, string | undefined>): Promise<EmployeePage> {
-    const query = parseOrThrow(ListEmployeesQuery, rawQuery, "Invalid query parameters");
+    return this.listByQuery(parseOrThrow(ListEmployeesQuery, rawQuery, "Invalid query parameters"));
+  }
+
+  /** For callers that already parsed the query (for example a page that falls back to defaults). */
+  async listByQuery(query: ListEmployeesQueryData): Promise<EmployeePage> {
     const { rows, total } = await this.employees.list(query);
     return {
       data: rows.map(toEmployeeDto),

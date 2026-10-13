@@ -3,7 +3,8 @@ import { getCountry, isSupportedCountry } from "./countries";
 import { toMinor, toUsdMinor } from "./money";
 
 export const MAX_PAGE_SIZE = 100;
-const DEFAULT_PAGE_SIZE = 25;
+export const DEFAULT_PAGE_SIZE = 25;
+export const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 /** Guard against data-entry errors: the largest salary accepted, in whole USD. */
 export const MAX_SALARY_USD = 10_000_000;
 const MAX_SALARY_USD_MINOR = MAX_SALARY_USD * 100;
@@ -11,6 +12,7 @@ const MAX_SALARY_USD_MINOR = MAX_SALARY_USD * 100;
 export const SORT_FIELDS = ["fullName", "hireDate", "salaryUsd", "createdAt"] as const;
 export type SortField = (typeof SORT_FIELDS)[number];
 export type SortDirection = "asc" | "desc";
+export const DEFAULT_SORT: { field: SortField; direction: SortDirection } = { field: "fullName", direction: "asc" };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -110,7 +112,7 @@ const optionalText = z.preprocess(blankToUndefined, z.string().trim().min(1).max
 
 const sortParam = z
   .string()
-  .default("fullName:asc")
+  .default(`${DEFAULT_SORT.field}:${DEFAULT_SORT.direction}`)
   .transform((raw, ctx) => {
     const [field, direction = "asc", ...extra] = raw.split(":");
     const validField = SORT_FIELDS.find((f) => f === field);

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ListEmployeesQuery } from "@/server/domain/employee";
 import { DuplicateEmailError, NotFoundError, ValidationError } from "@/server/domain/errors";
 import type { EmployeeRepository } from "@/server/repositories/employee-repository";
 import { EmployeeService } from "@/server/services/employee-service";
@@ -54,6 +55,13 @@ describe("EmployeeService", () => {
 
     it("clamps an oversized page size", async () => {
       expect((await service.list({ pageSize: "500" })).page.pageSize).toBe(100);
+    });
+
+    it("lists from an already-parsed query without parsing again", async () => {
+      const query = ListEmployeesQuery.parse({ country: "JP", sort: "salaryUsd:desc" });
+      const result = await service.listByQuery(query);
+      expect(result.data.map((e) => e.id)).toEqual([fixtureId(8), fixtureId(9)]);
+      expect(result.page).toEqual({ page: 1, pageSize: 25, total: 2, totalPages: 1 });
     });
 
     it("rejects an invalid query with field details", async () => {
