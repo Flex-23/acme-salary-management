@@ -115,6 +115,11 @@ describe("EmployeeUpdate", () => {
     const result = EmployeeUpdate.safeParse({ salary: 100 });
     expect(issuePaths(result)).toContain("countryCode");
   });
+
+  it("requires the salary when a country is given, so the currency is never reinterpreted", () => {
+    const result = EmployeeUpdate.safeParse({ countryCode: "US" });
+    expect(issuePaths(result)).toContain("salary");
+  });
 });
 
 describe("ListEmployeesQuery", () => {

@@ -28,6 +28,8 @@ needs one place to maintain salary records and see how the organisation pays peo
 - Currency is **derived from the employee's country** (one currency per country).
 - Cross-country comparison uses **fixed, dated reference FX rates** (illustrative, not live).
 - One role: HR Manager.
+- Salary is capped at 10,000,000 USD (after conversion) as a guard against data-entry errors,
+  not a business rule.
 
 ## Out of scope (this version)
 - Authentication / roles — single trusted persona; deployment access is controlled outside the app.

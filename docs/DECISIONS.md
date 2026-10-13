@@ -49,3 +49,18 @@
 - **Context:** 10k rows, one user, aggregates computed in SQL in milliseconds.
 - **Decision:** Use Next.js caching with a tag, invalidated on every employee mutation.
 - **Consequences:** Less infrastructure to run. Revisit only if measured load requires it.
+
+## 9. Salary and country are updated together
+- **Context:** Salary is stored in the country's currency. A patch with only `countryCode`
+  would silently reinterpret the stored amount in another currency (JP→US turns ¥5,000,000
+  into $50,000.00). A patch with only `salary` needs the country to convert to minor units.
+- **Decision:** `EmployeeUpdate` requires `salary` and `countryCode` to be sent both or neither.
+- **Consequences:** The domain schema stays pure and a currency change is always an explicit
+  re-entry of the amount. Alternative considered: let the service merge the employee's current
+  country into a salary-only patch. It is friendlier for API clients but needs a read before
+  every update and still cannot handle a country-only change safely. Revisit if clients
+  need salary-only patches.
+
+## 10. Invalid query values return 400; out-of-range numbers are clamped
+- **Decision:** Malformed values (non-numeric `page`, unknown sort field, unsupported country) are
+  rejected with 400; numeric values outside the allowed range (`pageSize` > 100, `page` < 1) are clamped.

@@ -4,7 +4,9 @@ import { toMinor, toUsdMinor } from "./money";
 
 export const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
-const MAX_SALARY_USD_MINOR = 10_000_000 * 100;
+/** Guard against data-entry errors: the largest salary accepted, in whole USD. */
+export const MAX_SALARY_USD = 10_000_000;
+const MAX_SALARY_USD_MINOR = MAX_SALARY_USD * 100;
 
 export const SORT_FIELDS = ["fullName", "hireDate", "salaryUsd", "createdAt"] as const;
 export type SortField = (typeof SORT_FIELDS)[number];
@@ -66,17 +68,19 @@ export function makeEmployeeSchemas({ today }: { today: string }) {
     .object(fields)
     .partial()
     .transform(({ salary, ...rest }, ctx) => {
-      if (salary === undefined) return rest;
-      if (rest.countryCode === undefined) {
+      const { countryCode } = rest;
+      if (salary === undefined && countryCode === undefined) return rest;
+      if (salary === undefined || countryCode === undefined) {
+        const missing = salary === undefined ? "salary" : "countryCode";
         ctx.issues.push({
           code: "custom",
-          message: "countryCode is required when salary is provided",
-          input: salary,
-          path: ["countryCode"],
+          message: "salary and countryCode must be sent together",
+          input: rest,
+          path: [missing],
         });
         return z.NEVER;
       }
-      return { ...rest, salaryMinor: salaryToMinor(salary, rest.countryCode, ctx) };
+      return { ...rest, salaryMinor: salaryToMinor(salary, countryCode, ctx) };
     });
 
   return { EmployeeInput, EmployeeUpdate };
