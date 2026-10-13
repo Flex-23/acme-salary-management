@@ -71,6 +71,21 @@ export function describeEmployeeRepository(name: string, createRepository: Emplo
         expect(await listIds({ search: "_" })).toEqual([]);
       });
 
+      it("finds names containing wildcard characters when searched literally", async () => {
+        const created = await repo.create({
+          fullName: "Pat 50% Off",
+          email: "pat@acme.com",
+          jobTitle: "Analyst",
+          department: "Finance",
+          countryCode: "US",
+          salaryMinor: 5_000_000,
+          hireDate: "2025-01-06",
+        });
+        expect(await listIds({ search: "50%" })).toEqual([created.id]);
+        expect(await listIds({ search: "5%f" })).toEqual([]);
+        expect(await listIds({ search: "Pat_50" })).toEqual([]);
+      });
+
       it("filters by country, department and job title", async () => {
         expect(await listIds({ country: "JP", sort: "fullName:asc" })).toEqual([fixtureId(8), fixtureId(9)]);
         expect(await listIds({ department: "Product", sort: "fullName:asc" })).toEqual([fixtureId(3), fixtureId(10)]);
