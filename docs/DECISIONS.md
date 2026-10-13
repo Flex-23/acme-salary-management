@@ -64,3 +64,13 @@
 ## 10. Invalid query values return 400; out-of-range numbers are clamped
 - **Decision:** Malformed values (non-numeric `page`, unknown sort field, unsupported country) are
   rejected with 400; numeric values outside the allowed range (`pageSize` > 100, `page` < 1) are clamped.
+
+## 11. Default list order is name, compared with the "C" collation
+- **Context:** The old default (`created_at desc`) was meaningless for seeded data, where many rows
+  share `created_at`, and needed a sort on the whole table. Locale-based name sorting also differs
+  between PGlite and Supabase (for example, en_US ignores spaces at the first comparison level).
+- **Decision:** Default sort is `fullName:asc`, implemented as `lower(full_name) collate "C", id`,
+  backed by an expression index on exactly that expression.
+- **Consequences:** The first page is served from the index, and ordering is identical in tests and
+  production. Names sort by code point, so non-ASCII letters are not locale-aware. The ORDER BY in
+  the repository and the index definition must stay in sync.

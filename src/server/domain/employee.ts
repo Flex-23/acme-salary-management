@@ -106,7 +106,7 @@ const optionalText = z.preprocess(blankToUndefined, z.string().trim().min(1).max
 
 const sortParam = z
   .string()
-  .default("createdAt:desc")
+  .default("fullName:asc")
   .transform((raw, ctx) => {
     const [field, direction = "asc", ...extra] = raw.split(":");
     const validField = SORT_FIELDS.find((f) => f === field);

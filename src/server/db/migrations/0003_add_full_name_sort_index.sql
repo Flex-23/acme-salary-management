@@ -1,0 +1,1 @@
+CREATE INDEX "employees_full_name_sort_idx" ON "employees" USING btree (lower("full_name") collate "C","id");

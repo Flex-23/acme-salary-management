@@ -75,6 +75,17 @@ describe("migrations", () => {
     await ctx.client.exec("reset enable_seqscan");
   });
 
+  it("serve the default name ordering from an index on (lower(full_name), id)", async () => {
+    await ctx.client.exec("set enable_seqscan = off");
+    const result = await ctx.client.query<{ "QUERY PLAN": string }>(
+      `explain select id from employees order by lower(full_name) collate "C", id limit 25`,
+    );
+    await ctx.client.exec("reset enable_seqscan");
+    const plan = result.rows.map((r) => r["QUERY PLAN"]).join(" ");
+    expect(plan).toContain("employees_full_name_sort_idx");
+    expect(plan).not.toContain("Sort");
+  });
+
   it("reject a zero salary", async () => {
     await expect(
       ctx.db.insert(employees).values({ ...validEmployee, salaryMinor: 0 }),

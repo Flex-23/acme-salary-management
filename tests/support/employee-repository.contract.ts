@@ -29,13 +29,18 @@ export function describeEmployeeRepository(name: string, createRepository: Emplo
       (await repo.list(query({ pageSize: "100", ...params }))).rows.map((r) => r.id);
 
     describe("list", () => {
-      it("returns the total and, by default, newest first with id as tiebreaker", async () => {
+      it("returns the total and, by default, orders by name", async () => {
         const result = await repo.list(query({ pageSize: "100" }));
+        const byName = [...FIXTURE_EMPLOYEES].sort((a, b) => a.fullName.localeCompare(b.fullName));
+        expect(result.total).toBe(12);
+        expect(result.rows.map((r) => r.id)).toEqual(ids(byName));
+      });
+
+      it("orders by created date with id as tiebreaker when rows share a timestamp", async () => {
         const newestFirst = [...FIXTURE_EMPLOYEES].sort(
           (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || byId(a, b),
         );
-        expect(result.total).toBe(12);
-        expect(result.rows.map((r) => r.id)).toEqual(ids(newestFirst));
+        expect(await listIds({ sort: "createdAt:desc" })).toEqual(ids(newestFirst));
       });
 
       it("includes currency and the USD-normalised salary", async () => {

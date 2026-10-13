@@ -127,7 +127,7 @@ describe("ListEmployeesQuery", () => {
     expect(ListEmployeesQuery.parse({})).toEqual({
       page: 1,
       pageSize: 25,
-      sort: { field: "createdAt", direction: "desc" },
+      sort: { field: "fullName", direction: "asc" },
     });
   });
 
