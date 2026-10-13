@@ -16,7 +16,8 @@
     "db:seed": "tsx src/server/db/seed/cli.ts",
     "loadtest": "tsx scripts/loadtest.ts",
     "check:timeout": "tsx scripts/check-statement-timeout.ts",
-    "explain": "tsx --conditions=react-server scripts/explain.ts"
+    "explain": "tsx --conditions=react-server scripts/explain.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

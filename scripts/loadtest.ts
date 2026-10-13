@@ -10,12 +10,16 @@
  *   --only <text>                         run only scenarios whose name contains the text
  *   --json <file>                         also write the raw results as JSON
  *   --cache-probe                         also time a cache miss against cache hits (creates and removes one test employee)
+ *   --user / --password                   Basic Auth credentials (or BASIC_AUTH_USER / BASIC_AUTH_PASSWORD)
+ *   --connections <n>     CONNECTIONS     one concurrency level for every scenario (default: 10 and 50 as listed)
+ *   --rate <req/s>        RATE            cap the TOTAL request rate, for a gentle run against a deployment
  *
  * Pass criterion: no 5xx responses, no connection errors, no timeouts. Never point this at production data
  * you care about: the cache probe writes one row (and deletes it again).
  */
 import { writeFileSync } from "node:fs";
 import autocannon from "autocannon";
+import { basicAuthHeader, credentialsFrom } from "./lib/http-auth";
 import { formatReport, summarize, verdict, type ScenarioResult } from "./lib/load-stats";
 
 type Scenario = { name: string; requests: { method?: "GET"; path: string }[]; connections: number };
@@ -30,12 +34,16 @@ const DURATION = Number(option("duration", "DURATION", "10"));
 const ONLY = option("only", "ONLY", "");
 const JSON_FILE = option("json", "JSON_FILE", "");
 const CACHE_PROBE = process.argv.includes("--cache-probe");
+const CONNECTIONS = Number(option("connections", "CONNECTIONS", "0"));
+const RATE = Number(option("rate", "RATE", "0"));
+const credentials = credentialsFrom(process.argv.slice(2), process.env);
+const AUTH: Record<string, string> = credentials ? { authorization: basicAuthHeader(credentials.user, credentials.password) } : {};
 
 const LOW = 10;
 const HIGH = 50; // above the pool size (5), so the in-app query limiter is exercised
 
 async function pickEmployeeIds(): Promise<string[]> {
-  const response = await fetch(`${BASE_URL}/api/employees?pageSize=100&page=7`);
+  const response = await fetch(`${BASE_URL}/api/employees?pageSize=100&page=7`, { headers: AUTH });
   const body = (await response.json()) as { data: { id: string }[] };
   return body.data.map((employee) => employee.id);
 }
@@ -110,6 +118,8 @@ async function run(scenario: Scenario): Promise<ScenarioResult> {
         connections: scenario.connections,
         duration: DURATION,
         timeout: 30,
+        ...(RATE > 0 ? { overallRate: RATE } : {}),
+        headers: AUTH,
         requests: scenario.requests.map((request) => ({ method: "GET", path: request.path })),
       },
       (error, finished) => (error ? reject(error) : resolve(finished)),
@@ -137,7 +147,7 @@ async function run(scenario: Scenario): Promise<ScenarioResult> {
 async function probeCache(): Promise<void> {
   const time = async (path: string) => {
     const started = performance.now();
-    const response = await fetch(`${BASE_URL}${path}`);
+    const response = await fetch(`${BASE_URL}${path}`, { headers: AUTH });
     await response.arrayBuffer();
     return { ms: performance.now() - started, status: response.status };
   };
@@ -150,7 +160,7 @@ async function probeCache(): Promise<void> {
     salary: 100000,
     hireDate: "2025-01-06",
   };
-  const created = await fetch(`${BASE_URL}/api/employees`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const created = await fetch(`${BASE_URL}/api/employees`, { method: "POST", headers: { ...AUTH, "content-type": "application/json" }, body: JSON.stringify(body) });
   const id = ((await created.json()) as { data: { id: string } }).data.id;
   try {
     console.log("\nCache probe (the create above invalidated the 'insights' tag):");
@@ -162,21 +172,29 @@ async function probeCache(): Promise<void> {
       console.log(`  ${path.padEnd(32)} miss ${miss.ms.toFixed(0).padStart(5)} ms   hit p50 ${stats.p50.toFixed(0).padStart(4)} ms  p95 ${stats.p95.toFixed(0).padStart(4)} ms`);
     }
   } finally {
-    await fetch(`${BASE_URL}/api/employees/${id}`, { method: "DELETE" });
+    await fetch(`${BASE_URL}/api/employees/${id}`, { method: "DELETE", headers: AUTH });
   }
 }
 
 async function main() {
   const health = await fetch(`${BASE_URL}/api/health`).catch(() => undefined);
   if (!health?.ok) throw new Error(`The server at ${BASE_URL} is not healthy. Start a production build first: npm run build && npm start`);
-  console.log(`Target ${BASE_URL}, ${DURATION} s per scenario, pool size 5 (high-concurrency runs use ${HIGH} connections)\n`);
+  const pace = RATE > 0 ? `at most ${RATE} req/s in total` : "as fast as possible";
+  console.log(`Target ${BASE_URL}, ${DURATION} s per scenario, ${pace}${credentials ? ", with credentials" : ""}\n`);
 
   const ids = await pickEmployeeIds();
-  const scenarios = buildScenarios(ids).filter((scenario) => scenario.name.includes(ONLY));
+  const matching = buildScenarios(ids).filter((scenario) => scenario.name.includes(ONLY));
+  // One concurrency level for everything: drop the duplicates that only differed by it.
+  const scenarios =
+    CONNECTIONS > 0
+      ? matching
+          .filter((scenario, index) => matching.findIndex((other) => other.name === scenario.name) === index)
+          .map((scenario) => ({ ...scenario, connections: CONNECTIONS }))
+      : matching;
   const results: ScenarioResult[] = [];
 
   // One warm-up pass so the first scenario does not pay for the JIT and cold caches.
-  await fetch(`${BASE_URL}/api/employees`).then((r) => r.arrayBuffer());
+  await fetch(`${BASE_URL}/api/employees`, { headers: AUTH }).then((r) => r.arrayBuffer());
 
   for (const scenario of scenarios) {
     process.stdout.write(`running ${scenario.name} (${scenario.connections} connections)... `);
