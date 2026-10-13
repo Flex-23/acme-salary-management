@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FX_RATES_AS_OF } from "@/server/domain/countries";
 import { CountrySection } from "./_components/country-section";
+import { DepartmentSection } from "./_components/department-section";
 import { KpiSection } from "./_components/kpi-section";
 import { InsightSection } from "./_components/section";
 import { KpiSkeleton, SectionBodySkeleton } from "./_components/skeletons";
@@ -26,6 +27,12 @@ export default function InsightsPage() {
       <InsightSection id="by-country" title="Pay by country" question="Where do we pay the most?">
         <Suspense fallback={<SectionBodySkeleton label="pay by country" chartHeight={620} rows={10} />}>
           <CountrySection />
+        </Suspense>
+      </InsightSection>
+
+      <InsightSection id="by-department" title="Pay by department" question="Which departments cost the most per person?">
+        <Suspense fallback={<SectionBodySkeleton label="pay by department" chartHeight={620} rows={10} />}>
+          <DepartmentSection />
         </Suspense>
       </InsightSection>
     </div>
