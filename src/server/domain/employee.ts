@@ -14,23 +14,27 @@ export type SortDirection = "asc" | "desc";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function isRealDate(value: string): boolean {
+function isCalendarDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+const REQUIRED = "Required";
+const NAME_LENGTH = "Full name must be 2–120 characters";
+const salaryType = { error: (issue: { input?: unknown }) => (issue.input === undefined ? REQUIRED : "Enter a valid amount") };
+
 function makeFields(today: string) {
   return {
-    fullName: z.string().trim().min(2).max(120),
-    email: z.string().trim().toLowerCase().pipe(z.email()),
-    jobTitle: z.string().trim().min(1).max(120),
-    department: z.string().trim().min(1).max(120),
-    countryCode: z.string().refine(isSupportedCountry, "Unsupported country"),
-    salary: z.number().positive(),
+    fullName: z.string(REQUIRED).trim().min(2, NAME_LENGTH).max(120, NAME_LENGTH),
+    email: z.string(REQUIRED).trim().toLowerCase().pipe(z.email("Enter a valid email address")),
+    jobTitle: z.string(REQUIRED).trim().min(1, REQUIRED).max(120, "Job title is too long"),
+    department: z.string(REQUIRED).trim().min(1, REQUIRED).max(120, "Department is too long"),
+    countryCode: z.string(REQUIRED).refine(isSupportedCountry, "Select a supported country"),
+    salary: z.number(salaryType).positive("Salary must be greater than zero"),
     hireDate: z
-      .string()
-      .regex(ISO_DATE, "Expected YYYY-MM-DD")
-      .refine(isRealDate, "Invalid date")
+      .string(REQUIRED)
+      .refine(isCalendarDate, { error: "Enter a valid date (YYYY-MM-DD)", abort: true })
       .refine((date) => date <= today, "Hire date cannot be in the future"),
   };
 }

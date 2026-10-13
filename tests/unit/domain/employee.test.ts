@@ -90,6 +90,31 @@ describe("EmployeeInput", () => {
   });
 });
 
+describe("EmployeeInput messages", () => {
+  const messageFor = (patch: object, field: string) => {
+    const result = EmployeeInput.safeParse({ ...valid, ...patch });
+    return result.error?.issues.find((i) => i.path.join(".") === field)?.message;
+  };
+
+  it("says 'Required' for every missing field", () => {
+    const result = EmployeeInput.safeParse({});
+    const messages = result.error?.issues.map((i) => i.message);
+    expect(messages).toHaveLength(7);
+    expect(new Set(messages)).toEqual(new Set(["Required"]));
+  });
+
+  it("explains each rule in plain language", () => {
+    expect(messageFor({ fullName: "A" }, "fullName")).toBe("Full name must be 2–120 characters");
+    expect(messageFor({ email: "nope" }, "email")).toBe("Enter a valid email address");
+    expect(messageFor({ countryCode: "XX" }, "countryCode")).toBe("Select a supported country");
+    expect(messageFor({ salary: Number.NaN }, "salary")).toBe("Enter a valid amount");
+    expect(messageFor({ salary: 0 }, "salary")).toBe("Salary must be greater than zero");
+    expect(messageFor({ hireDate: "15/06/2024" }, "hireDate")).toBe("Enter a valid date (YYYY-MM-DD)");
+    expect(messageFor({ hireDate: "2024-02-30" }, "hireDate")).toBe("Enter a valid date (YYYY-MM-DD)");
+    expect(messageFor({ hireDate: "2026-06-16" }, "hireDate")).toBe("Hire date cannot be in the future");
+  });
+});
+
 describe("EmployeeUpdate", () => {
   it("accepts an empty patch", () => {
     expect(EmployeeUpdate.parse({})).toEqual({});
