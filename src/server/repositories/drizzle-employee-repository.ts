@@ -14,8 +14,14 @@ const UNIQUE_VIOLATION = "23505";
 const salaryUsdExpr = sql`(${employees.salaryMinor}::numeric * ${countries.usdPerUnit} * 100
   / power(10::numeric, ${countries.currencyExponent}::numeric))`;
 
+/**
+ * Case-insensitive name order that does not depend on the database's locale: the "C" collation
+ * compares code points, so PGlite and Supabase order names identically.
+ */
+const fullNameSortExpr = sql`lower(${employees.fullName}) collate "C"`;
+
 const sortExpressions = {
-  fullName: employees.fullName,
+  fullName: fullNameSortExpr,
   hireDate: employees.hireDate,
   salaryUsd: salaryUsdExpr,
   createdAt: employees.createdAt,

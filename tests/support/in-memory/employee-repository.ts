@@ -21,7 +21,7 @@ function matches(e: Employee, q: Query): boolean {
 function sortValue(e: EmployeeListItem, field: Query["sort"]["field"]): string | number {
   switch (field) {
     case "fullName":
-      return e.fullName;
+      return e.fullName.toLowerCase();
     case "hireDate":
       return e.hireDate;
     case "salaryUsd":

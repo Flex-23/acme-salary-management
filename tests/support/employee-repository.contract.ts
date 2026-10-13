@@ -120,6 +120,31 @@ export function describeEmployeeRepository(name: string, createRepository: Emplo
         expect(await listIds({ sort: "fullName:desc" })).toEqual([...names].reverse());
       });
 
+      it("sorts names case-insensitively and by code point, not by locale", async () => {
+        const names = ["zane Quick", "Alan Ng", "bob Ray", "Carl Dow", "Ann Lee", "Anna Roy"];
+        for (const [index, fullName] of names.entries()) {
+          await repo.create({
+            fullName,
+            email: `sort${index}@acme.com`,
+            jobTitle: "Analyst",
+            department: "Finance",
+            countryCode: "FR",
+            salaryMinor: 5_000_000,
+            hireDate: "2025-01-06",
+          });
+        }
+        const sorted = (await repo.list(query({ country: "FR", sort: "fullName:asc" }))).rows;
+        // "Ann Lee" before "Anna Roy": the space sorts before letters (a locale collation would not).
+        expect(sorted.map((r) => r.fullName)).toEqual([
+          "Alan Ng",
+          "Ann Lee",
+          "Anna Roy",
+          "bob Ray",
+          "Carl Dow",
+          "zane Quick",
+        ]);
+      });
+
       it("sorts by hire date", async () => {
         const dates = [...FIXTURE_EMPLOYEES].sort((a, b) => a.hireDate.localeCompare(b.hireDate));
         expect(await listIds({ sort: "hireDate:asc" })).toEqual(ids(dates));
