@@ -8,6 +8,7 @@ import type { EmployeeDto } from "@/server/services/dto";
 import type { EmployeePage } from "@/server/services/employee-service";
 import { hasActiveFilters, type TableParams } from "../_lib/url-state";
 import { useTableNavigation } from "../_lib/use-table-navigation";
+import { DeleteEmployeeDialog } from "./delete-employee-dialog";
 import { EmployeeFormDialog } from "./employee-form-dialog";
 import { EmployeesTable } from "./employees-table";
 import { TablePagination } from "./table-pagination";
@@ -26,6 +27,7 @@ export function EmployeesView({ rows, page, params, filterOptions, ignoredInvali
   const navigation = useTableNavigation(params);
   // `employee` stays set while the dialog animates closed, so the form never flashes into "create" mode.
   const [form, setForm] = useState<{ open: boolean; employee: EmployeeDto | null }>({ open: false, employee: null });
+  const [removal, setRemoval] = useState<{ open: boolean; employee: EmployeeDto | null }>({ open: false, employee: null });
 
   const emptyState = hasActiveFilters(params) ? (
     <div className="flex flex-col items-center gap-3 p-10 text-center">
@@ -59,7 +61,7 @@ export function EmployeesView({ rows, page, params, filterOptions, ignoredInvali
           sort={params.sort}
           onSortChange={(sort) => navigation.update({ sort })}
           onEdit={(employee) => setForm({ open: true, employee })}
-          onDelete={() => undefined}
+          onDelete={(employee) => setRemoval({ open: true, employee })}
           emptyState={emptyState}
         />
         <TablePagination
@@ -74,6 +76,12 @@ export function EmployeesView({ rows, page, params, filterOptions, ignoredInvali
         employee={form.employee}
         filterOptions={filterOptions}
         onSaved={navigation.refresh}
+      />
+      <DeleteEmployeeDialog
+        open={removal.open}
+        onOpenChange={(open) => setRemoval((current) => ({ ...current, open }))}
+        employee={removal.employee}
+        onDeleted={navigation.refresh}
       />
     </div>
   );
