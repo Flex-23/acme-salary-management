@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { COLUMN_LABELS } from "./column-labels";
+import { COLUMN_DEFS, responsiveClass } from "./column-labels";
 
 const ROWS = 10;
 
@@ -18,8 +18,10 @@ export function EmployeesSkeleton() {
         <Table>
           <TableHeader>
             <TableRow>
-              {COLUMN_LABELS.map((label) => (
-                <TableHead key={label}>{label}</TableHead>
+              {COLUMN_DEFS.map(({ id, label }) => (
+                <TableHead key={id} className={responsiveClass(id)}>
+                  {label}
+                </TableHead>
               ))}
               <TableHead className="w-24" />
             </TableRow>
@@ -27,8 +29,8 @@ export function EmployeesSkeleton() {
           <TableBody>
             {Array.from({ length: ROWS }, (_, row) => (
               <TableRow key={row}>
-                {COLUMN_LABELS.map((label) => (
-                  <TableCell key={label}>
+                {COLUMN_DEFS.map(({ id }) => (
+                  <TableCell key={id} className={responsiveClass(id)}>
                     <Skeleton className="h-4 w-full max-w-36" />
                   </TableCell>
                 ))}

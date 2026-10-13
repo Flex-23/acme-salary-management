@@ -122,3 +122,18 @@
   `unstable_rethrow`; catching them turned a request-time signal into a 500 during the first build.
 - **Consequences:** Responses never contain stack traces, SQL or driver messages. Non-UUID ids are treated as
   not found in the service, so every caller is covered. `unstable_rethrow` is marked unstable in Next.js 16.
+
+## 17. Employees page: static shell, streamed data, single write path
+- **Context:** `cacheComponents` is on, so reading `searchParams` or the database outside `<Suspense>` blocks
+  the route.
+- **Decision:** `/employees` is a sync Server Component that renders the static title and wraps an async
+  `EmployeesContent` in `<Suspense>` with a table-shaped skeleton (same columns, so nothing jumps). Only that
+  child awaits `searchParams`, so it is the only dynamic part: the build reports the route as partially
+  prerendered. It calls `EmployeeService` directly (no HTTP hop) and reads filter options through the same
+  tagged cache as `/api/meta/filters`. Table state (search, filters, sort, page, page size) lives only in the
+  URL; sort, page and filter changes push history entries and search typing replaces them. Mutations are
+  `fetch` calls to the existing `/api/employees` routes followed by `router.refresh()`, so there is one write
+  path and the cache invalidation stays in one place (no duplicate Server Actions).
+- **Consequences:** Every view is shareable and back-button friendly. An out-of-range page redirects to the
+  last page; an invalid URL falls back to defaults with a notice. The shared zod schema validates the form in
+  the browser, so the client bundle includes zod and the domain money/country modules (small, pure).

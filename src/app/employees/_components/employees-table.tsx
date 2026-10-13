@@ -5,9 +5,11 @@ import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, PencilIcon, Trash2Icon 
 import { useMemo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { SORT_FIELDS, type SortField } from "@/server/domain/employee";
 import type { EmployeeDto } from "@/server/services/dto";
 import type { TableParams } from "../_lib/url-state";
+import { responsiveClass } from "./column-labels";
 import { columns, features } from "./columns";
 
 type Sort = TableParams["sort"];
@@ -57,7 +59,7 @@ export function EmployeesTable({ rows, sort, onSortChange, onEdit, onDelete, emp
                   <TableHead
                     key={header.id}
                     aria-sort={header.column.getCanSort() ? (sorted ? ARIA_SORT[sorted] : "none") : undefined}
-                    className={alignRight ? "text-right" : undefined}
+                    className={cn(alignRight && "text-right", responsiveClass(header.column.id))}
                   >
                     {header.column.getCanSort() ? (
                       <Button
@@ -98,7 +100,7 @@ export function EmployeesTable({ rows, sort, onSortChange, onEdit, onDelete, emp
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className={responsiveClass(cell.column.id)}>
                     <table.FlexRender cell={cell} />
                   </TableCell>
                 ))}
