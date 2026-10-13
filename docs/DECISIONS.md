@@ -147,3 +147,18 @@
   The generated `.dark` variables are class-based and never activated.
 - **Consequences:** The app looks the same whatever the OS preference. Verified with `prefers-color-scheme:
   dark` emulation. A real dark theme needs the `.dark` palette checked for contrast and a user switch.
+
+## 19. Queries are queued in the application, not on a connection
+- **Context:** The insights page runs several aggregate queries at once. Through Supabase's transaction
+  pooler (port 6543, `prepare: false`) postgres.js hung whenever more queries were issued than the pool had
+  connections (6 queries on 5 connections was enough), and under load results could arrive crossed (a
+  `RangeError: Minor amount must be an integer` appeared once). Stuck sessions stayed "active" on the
+  server for many minutes. Short queries did not trigger it, long aggregate ones did; the session pooler
+  (port 5432) did not hang. Measured with a stress script against the real database.
+- **Decision:** `src/server/db/limit-concurrency.ts` wraps the client so at most `max` (5) queries are in
+  flight and the rest wait in the application, in order. postgres.js therefore never queues a query on a
+  connection. We stay on the transaction pooler.
+- **Consequences:** 90 concurrent queries (10 simultaneous page loads) complete with identical results.
+  Throughput is bounded by the pool size, which is what the pool is for. The wrapper only covers `unsafe`
+  (Drizzle's query entry point), not `begin`; the app uses no transactions (the seed uses the session pooler
+  directly). If postgres.js or Supavisor fix this, the wrapper can be deleted.
