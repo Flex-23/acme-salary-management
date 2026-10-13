@@ -190,6 +190,28 @@ same build with the normal role served the next request with 200. A route test c
 They are now rejected with 400. `pageSize` is clamped to 100 (also for huge values), non-UUID ids answer 404, and
 the load test sends the same kinds of input to the running server (170 rejections, no 5xx).
 
+## Measured from Vercel (fra1)
+
+_TODO: fill in after the first deployment. Everything above includes about 116 ms of Baghdad to Frankfurt
+latency on every query; this section is the same app next to its database._
+
+Run it gently, so a public demo is not hammered (a single connection pair and at most 5 requests per second in
+total, 10 s per scenario). The access credentials go through the environment, not the command line history:
+
+```bash
+BASIC_AUTH_USER='<user>' BASIC_AUTH_PASSWORD='<password>' \
+  npm run loadtest -- --base-url https://<your-app>.vercel.app --connections 2 --rate 5 --duration 10 \
+  --json .loadtest/vercel-fra1.json
+```
+
+Add `--cache-probe` only if you accept one temporary test employee being created and deleted on the deployed
+database. For a one-off round-trip figure from the same machine, run `npm run smoke -- --url <url> --user <u>
+--password <p>`: it prints the time of each request.
+
+| Scenario | Conns | req/s | p50 ms | p95 ms | p99 ms | 5xx |
+|---|---:|---:|---:|---:|---:|---:|
+| _TODO_ | | | | | | |
+
 ## Known limits
 
 - **Throughput of uncached, database-backed endpoints is bounded by `pool / round trip`** (15 to 30 req/s here).
