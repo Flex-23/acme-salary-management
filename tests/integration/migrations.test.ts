@@ -62,6 +62,19 @@ describe("migrations", () => {
     ]);
   });
 
+  it("let name and email substring searches use the trigram indexes", async () => {
+    await ctx.client.exec("set enable_seqscan = off");
+    const plan = async (column: string) => {
+      const result = await ctx.client.query<{ "QUERY PLAN": string }>(
+        `explain select 1 from employees where ${column} ilike '%ada%'`,
+      );
+      return result.rows.map((r) => r["QUERY PLAN"]).join(" ");
+    };
+    expect(await plan("full_name")).toContain("employees_full_name_trgm_idx");
+    expect(await plan("email")).toContain("employees_email_trgm_idx");
+    await ctx.client.exec("reset enable_seqscan");
+  });
+
   it("reject a zero salary", async () => {
     await expect(
       ctx.db.insert(employees).values({ ...validEmployee, salaryMinor: 0 }),
