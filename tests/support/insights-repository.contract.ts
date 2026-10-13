@@ -5,6 +5,7 @@ import { toUsdMinor } from "@/server/domain/money";
 import type { Employee } from "@/server/domain/types";
 import {
   DISTRIBUTION_BAND_USD_MINOR,
+  DISTRIBUTION_TOP_USD_MINOR,
   type InsightsRepository,
   type PayStats,
 } from "@/server/repositories/insights-repository";
@@ -131,7 +132,7 @@ export function describeInsightsRepository(name: string, createRepository: Insig
 
     describe("distribution", () => {
       const toBands = (employees: Employee[]) =>
-        histogram(employees.map(usd), DISTRIBUTION_BAND_USD_MINOR).map((band) => ({
+        histogram(employees.map(usd), DISTRIBUTION_BAND_USD_MINOR, DISTRIBUTION_TOP_USD_MINOR).map((band) => ({
           fromUsdMinor: band.from,
           toUsdMinor: band.to,
           count: band.count,
@@ -152,6 +153,24 @@ export function describeInsightsRepository(name: string, createRepository: Insig
         const result = await (await createRepository(sparse)).distribution();
         expect(result.map((b) => b.count)).toEqual([1, 0, 0, 0, 1]);
         expect(result[1]).toEqual({ fromUsdMinor: 6_000_000, toUsdMinor: 8_000_000, count: 0 });
+      });
+
+      it("puts salaries from 300,000 USD up into one open-ended band, so an outlier adds no empty bars", async () => {
+        const [first, second] = FIXTURE_EMPLOYEES.filter((e) => e.countryCode === "US");
+        const withOutlier = [
+          { ...first!, salaryMinor: 5_000_000 },
+          { ...second!, salaryMinor: 500_000_000 }, // 5,000,000 USD
+        ];
+        const result = await (await createRepository(withOutlier)).distribution();
+        expect(result).toHaveLength(14); // 40k-60k up to the open-ended band: not hundreds
+        expect(result[0]).toEqual({ fromUsdMinor: 4_000_000, toUsdMinor: 6_000_000, count: 1 });
+        expect(result[result.length - 2]).toMatchObject({ fromUsdMinor: 28_000_000, toUsdMinor: 30_000_000, count: 0 });
+        expect(result[result.length - 1]).toEqual({ fromUsdMinor: 30_000_000, toUsdMinor: null, count: 1 });
+      });
+
+      it("has no open-ended band when nobody earns 300,000 USD or more", async () => {
+        const result = await repo.distribution();
+        expect(result.every((band) => band.toUsdMinor !== null)).toBe(true);
       });
 
       it("can be limited to one country", async () => {

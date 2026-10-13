@@ -64,7 +64,17 @@ describe("InsightsService", () => {
     const bands = await service.distribution();
     expect(bands.reduce((sum, b) => sum + b.count, 0)).toBe(12);
     expect(bands[0]?.from).toMatchObject({ currency: "USD" });
-    expect(bands[0]?.to.amountMinor).toBeGreaterThan(bands[0]!.from.amountMinor);
+    expect(bands[0]?.to?.amountMinor).toBeGreaterThan(bands[0]!.from.amountMinor);
+  });
+
+  it("describes the open-ended top band with a null upper edge", async () => {
+    const [first] = FIXTURE_EMPLOYEES;
+    const outlier = [{ ...first!, countryCode: "US", salaryMinor: 500_000_000 }];
+    const service = new InsightsService(new InMemoryInsightsRepository(new InMemoryStore(outlier)));
+    const bands = await service.distribution();
+    expect(bands).toEqual([
+      { from: { amountMinor: 30_000_000, currency: "USD", formatted: "$300,000.00" }, to: null, count: 1 },
+    ]);
   });
 
   it("limits the distribution to one country and validates it", async () => {

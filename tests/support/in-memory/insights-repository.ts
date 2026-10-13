@@ -4,6 +4,7 @@ import { toUsdMinor } from "@/server/domain/money";
 import type { Employee } from "@/server/domain/types";
 import {
   DISTRIBUTION_BAND_USD_MINOR,
+  DISTRIBUTION_TOP_USD_MINOR,
   type CountryInsight,
   type DepartmentInsight,
   type DistributionBand,
@@ -85,7 +86,7 @@ export class InMemoryInsightsRepository implements InsightsRepository {
     const employees = countryCode
       ? this.store.employees.filter((e) => e.countryCode === countryCode)
       : this.store.employees;
-    return histogram(employees.map(usd), DISTRIBUTION_BAND_USD_MINOR).map((band) => ({
+    return histogram(employees.map(usd), DISTRIBUTION_BAND_USD_MINOR, DISTRIBUTION_TOP_USD_MINOR).map((band) => ({
       fromUsdMinor: band.from,
       toUsdMinor: band.to,
       count: band.count,

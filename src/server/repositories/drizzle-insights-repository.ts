@@ -4,6 +4,7 @@ import type { Database } from "../db/database";
 import { countries, employees } from "../db/schema";
 import {
   DISTRIBUTION_BAND_USD_MINOR,
+  DISTRIBUTION_TOP_USD_MINOR,
   type CountryInsight,
   type DepartmentInsight,
   type DistributionBand,
@@ -12,6 +13,8 @@ import {
   type PayStats,
   type Summary,
 } from "./insights-repository";
+
+const TOP_BAND_INDEX = DISTRIBUTION_TOP_USD_MINOR / DISTRIBUTION_BAND_USD_MINOR;
 
 /** Salary in USD minor units, unrounded: salary_minor / 10^exponent * rate * 100. */
 const usdExpr = sql`(${employees.salaryMinor}::numeric * ${countries.usdPerUnit} * 100
@@ -142,9 +145,11 @@ export class DrizzleInsightsRepository implements InsightsRepository {
   }
 
   async distribution(countryCode?: string): Promise<DistributionBand[]> {
-    // The width is a code constant, inlined so SELECT and GROUP BY share one expression.
+    // The width and top index are code constants, inlined so SELECT and GROUP BY share one expression.
+    // Everything from the top salary up lands in the last band index, which is rendered open-ended.
     const width = sql.raw(String(DISTRIBUTION_BAND_USD_MINOR));
-    const band = sql`floor(${usdExpr} / ${width})`;
+    const topIndex = sql.raw(String(TOP_BAND_INDEX));
+    const band = sql`least(floor(${usdExpr} / ${width}), ${topIndex})`;
     const rows = await this.db
       .select({ band: asNumber(band), count: headcount })
       .from(employees)
@@ -167,7 +172,7 @@ function fillEmptyBands(rows: { band: number; count: number }[]): DistributionBa
   for (let index = first; index <= last; index++) {
     bands.push({
       fromUsdMinor: index * DISTRIBUTION_BAND_USD_MINOR,
-      toUsdMinor: (index + 1) * DISTRIBUTION_BAND_USD_MINOR,
+      toUsdMinor: index === TOP_BAND_INDEX ? null : (index + 1) * DISTRIBUTION_BAND_USD_MINOR,
       count: counts.get(index) ?? 0,
     });
   }

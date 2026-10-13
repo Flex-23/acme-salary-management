@@ -75,6 +75,37 @@ describe("histogram", () => {
     expect(histogram([250, 260], 100)).toEqual([{ from: 200, to: 300, count: 2 }]);
   });
 
+  it("collapses everything from the cap upwards into one open-ended band", () => {
+    expect(histogram([0, 99, 100, 350, 10_000], 100, 300)).toEqual([
+      { from: 0, to: 100, count: 2 },
+      { from: 100, to: 200, count: 1 },
+      { from: 200, to: 300, count: 0 },
+      { from: 300, to: null, count: 2 },
+    ]);
+  });
+
+  it("does not create an outlier's hundreds of empty bands", () => {
+    const bands = histogram([50, 5_000_000], 100, 300);
+    expect(bands).toHaveLength(4);
+    expect(bands[3]).toEqual({ from: 300, to: null, count: 1 });
+  });
+
+  it("adds no open-ended band when nobody reaches the cap", () => {
+    expect(histogram([10, 250], 100, 300)).toEqual([
+      { from: 0, to: 100, count: 1 },
+      { from: 100, to: 200, count: 0 },
+      { from: 200, to: 300, count: 1 },
+    ]);
+  });
+
+  it("counts a value exactly at the cap in the open-ended band", () => {
+    expect(histogram([300], 100, 300)).toEqual([{ from: 300, to: null, count: 1 }]);
+  });
+
+  it("requires the cap to be a multiple of the band width", () => {
+    expect(() => histogram([1], 100, 250)).toThrow(RangeError);
+  });
+
   it("rejects a non-positive band width", () => {
     expect(() => histogram([1], 0)).toThrow(RangeError);
   });

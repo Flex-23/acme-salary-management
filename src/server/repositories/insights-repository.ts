@@ -31,10 +31,14 @@ export type DepartmentInsight = {
   usd: PayStats;
 };
 
-export type DistributionBand = { fromUsdMinor: number; toUsdMinor: number; count: number };
+/** `toUsdMinor` is null for the open-ended top band. */
+export type DistributionBand = { fromUsdMinor: number; toUsdMinor: number | null; count: number };
 
 /** Width of each distribution band: 20,000 USD. */
 export const DISTRIBUTION_BAND_USD_MINOR = 2_000_000;
+
+/** Salaries from 300,000 USD up share one open-ended band, so an outlier cannot create endless empty bands. */
+export const DISTRIBUTION_TOP_USD_MINOR = 30_000_000;
 
 export interface InsightsRepository {
   summary(): Promise<Summary>;

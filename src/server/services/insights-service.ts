@@ -33,7 +33,8 @@ export type JobTitleInsightDto = {
 
 export type DepartmentInsightDto = { department: string; headcount: number; usd: PayStatsDto };
 
-export type DistributionBandDto = { from: MoneyDto; to: MoneyDto; count: number };
+/** `to` is null for the open-ended top band ("300,000 USD and above"). */
+export type DistributionBandDto = { from: MoneyDto; to: MoneyDto | null; count: number };
 
 const USD = "USD";
 
@@ -116,7 +117,7 @@ export class InsightsService {
     const bands = await this.insights.distribution(countryCode);
     return bands.map((band) => ({
       from: toMoney(band.fromUsdMinor, USD),
-      to: toMoney(band.toUsdMinor, USD),
+      to: band.toUsdMinor === null ? null : toMoney(band.toUsdMinor, USD),
       count: band.count,
     }));
   }
