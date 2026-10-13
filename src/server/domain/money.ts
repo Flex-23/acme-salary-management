@@ -21,7 +21,7 @@ export function fromMinor(minor: number, exponent: number): number {
 }
 
 /** Converts local minor units to USD cents using the country's fixed rate, rounding half to even. */
-export function toUsdMinor(minor: number, country: Country): number {
+export function toUsdMinor(minor: number, country: Pick<Country, "currencyExponent" | "usdPerUnit">): number {
   const [whole = "0", fraction = ""] = country.usdPerUnit.split(".");
   const rate = BigInt(whole + fraction);
   const numerator = BigInt(minor) * rate * 10n ** BigInt(USD_EXPONENT);
