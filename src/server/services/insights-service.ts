@@ -55,6 +55,16 @@ function requireCountry(code: string): string {
   return code;
 }
 
+/** Validates the required `country` query parameter before it reaches a cache key. */
+export function requireCountryParam(value: string | null): string {
+  return requireCountry(value ?? "");
+}
+
+/** Validates the optional `country` query parameter; absent or empty means "all countries". */
+export function optionalCountryParam(value: string | null): string | undefined {
+  return value ? requireCountry(value) : undefined;
+}
+
 /** Turns repository figures into API-ready DTOs with formatted local and USD values. */
 export class InsightsService {
   constructor(private readonly insights: InsightsRepository) {}
