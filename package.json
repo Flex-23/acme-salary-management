@@ -14,8 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed/cli.ts",
-    "loadtest": "echo not implemented yet",
-    "check:timeout": "tsx scripts/check-statement-timeout.ts"
+    "loadtest": "tsx scripts/loadtest.ts",
+    "check:timeout": "tsx scripts/check-statement-timeout.ts",
+    "explain": "tsx --conditions=react-server scripts/explain.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -41,10 +42,12 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
     "@tailwindcss/turbopack": "^4",
+    "@types/autocannon": "^7.12.7",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.0.4",
+    "autocannon": "^8.0.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",

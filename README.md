@@ -29,3 +29,9 @@ everything in one transaction, in batches of 1,000. Options: `npm run db:seed --
 It refuses to run with `NODE_ENV=production` unless `--force` is passed.
 
 `.env.local` is git-ignored. Only placeholders belong in `.env.example`.
+
+## Performance
+
+Load test, query plans and the resilience checks are documented in `docs/PERFORMANCE.md`.
+`npm run build && npm start`, then `npm run loadtest` (against a production build only), `npm run explain`
+and `npm run check:timeout`. `DATABASE_POOL_SIZE` (default 5, up to 20) tunes the connection pool.
