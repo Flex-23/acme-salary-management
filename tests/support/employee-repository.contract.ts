@@ -160,6 +160,22 @@ export function describeEmployeeRepository(name: string, createRepository: Emplo
       });
     });
 
+    describe("filterOptions", () => {
+      it("returns the distinct countries, departments and job titles in use, sorted", async () => {
+        const distinct = (values: string[]) => [...new Set(values)].sort();
+        expect(await repo.filterOptions()).toEqual({
+          countries: distinct(FIXTURE_EMPLOYEES.map((e) => e.countryCode)),
+          departments: ["Engineering", "Product", "Sales"],
+          jobTitles: ["Product Manager", "Sales Rep", "Software Engineer"],
+        });
+      });
+
+      it("is empty when there are no employees", async () => {
+        const empty = await createRepository([]);
+        expect(await empty.filterOptions()).toEqual({ countries: [], departments: [], jobTitles: [] });
+      });
+    });
+
     describe("findById", () => {
       it("returns the employee", async () => {
         expect(await repo.findById(fixtureId(2))).toEqual(FIXTURE_EMPLOYEES[1]);

@@ -3,8 +3,12 @@ import type { Employee, EmployeeListItem } from "../domain/types";
 
 export type ListResult = { rows: EmployeeListItem[]; total: number };
 
+export type FilterOptions = { countries: string[]; departments: string[]; jobTitles: string[] };
+
 export interface EmployeeRepository {
   list(query: ListEmployeesQueryData): Promise<ListResult>;
+  /** Distinct values currently in use, sorted by code point, for building filter controls. */
+  filterOptions(): Promise<FilterOptions>;
   findById(id: string): Promise<Employee | null>;
   /** @throws DuplicateEmailError when the email is already used */
   create(input: EmployeeInputData): Promise<Employee>;

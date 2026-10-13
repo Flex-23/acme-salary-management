@@ -14,6 +14,6 @@ afterAll(async () => {
 describeEmployeeRepository("DrizzleEmployeeRepository", async (seed) => {
   const { db } = await database;
   await db.delete(employees);
-  await db.insert(employees).values(seed);
+  if (seed.length > 0) await db.insert(employees).values(seed);
   return new DrizzleEmployeeRepository(db);
 });

@@ -1,12 +1,13 @@
 import "server-only";
 import { and, asc, desc, eq, getTableColumns, ilike, or, sql, type SQL } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { countries, employees } from "../db/schema";
 import type { Database } from "../db/database";
 import type { EmployeeInputData, EmployeeUpdateData, ListEmployeesQueryData } from "../domain/employee";
 import { DuplicateEmailError } from "../domain/errors";
 import { toUsdMinor } from "../domain/money";
 import type { Employee, EmployeeListItem } from "../domain/types";
-import type { EmployeeRepository, ListResult } from "./employee-repository";
+import type { EmployeeRepository, FilterOptions, ListResult } from "./employee-repository";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -80,6 +81,23 @@ export class DrizzleEmployeeRepository implements EmployeeRepository {
       salaryUsdMinor: toUsdMinor(employee.salaryMinor, { currencyExponent, usdPerUnit }),
     }));
     return { rows: items, total: totals?.total ?? 0 };
+  }
+
+  async filterOptions(): Promise<FilterOptions> {
+    const distinct = async (column: PgColumn) => {
+      const rows = await this.db
+        .select({ value: sql<string>`${column}` })
+        .from(employees)
+        .groupBy(column)
+        .orderBy(sql`${column} collate "C"`);
+      return rows.map((row) => row.value);
+    };
+    const [countries, departments, jobTitles] = await Promise.all([
+      distinct(employees.countryCode),
+      distinct(employees.department),
+      distinct(employees.jobTitle),
+    ]);
+    return { countries, departments, jobTitles };
   }
 
   async findById(id: string): Promise<Employee | null> {

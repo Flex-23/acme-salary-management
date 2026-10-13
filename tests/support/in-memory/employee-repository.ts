@@ -4,7 +4,7 @@ import type { EmployeeInputData, EmployeeUpdateData, ListEmployeesQueryData } fr
 import { DuplicateEmailError } from "@/server/domain/errors";
 import { toUsdMinor } from "@/server/domain/money";
 import type { Employee, EmployeeListItem } from "@/server/domain/types";
-import type { EmployeeRepository, ListResult } from "@/server/repositories/employee-repository";
+import type { EmployeeRepository, FilterOptions, ListResult } from "@/server/repositories/employee-repository";
 import type { InMemoryStore } from "./store";
 
 type Query = ListEmployeesQueryData;
@@ -52,6 +52,15 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     items.sort((a, b) => compare(a, b, query.sort));
     const start = (query.page - 1) * query.pageSize;
     return { rows: items.slice(start, start + query.pageSize), total: items.length };
+  }
+
+  async filterOptions(): Promise<FilterOptions> {
+    const distinct = (pick: (e: Employee) => string) => [...new Set(this.store.employees.map(pick))].sort();
+    return {
+      countries: distinct((e) => e.countryCode),
+      departments: distinct((e) => e.department),
+      jobTitles: distinct((e) => e.jobTitle),
+    };
   }
 
   async findById(id: string): Promise<Employee | null> {
