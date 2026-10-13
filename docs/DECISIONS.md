@@ -221,3 +221,19 @@
   repeated failures. Basic Auth is only safe over HTTPS (Vercel provides it). The password must be long and
   random, and rotating it means changing the environment variable and redeploying. Real authentication would
   replace this file, not extend it.
+- **Status:** kept as an optional, environment-gated feature. The public demo has it switched off (ADR 23).
+
+## 23. The public demo is open on purpose
+- **Context:** The demo is deployed at a public URL for reviewers. ADR 22 added a password in front of it, but a
+  password makes the project harder to review (a reviewer has to ask for credentials before seeing anything), and
+  the data is synthetic.
+- **Decision:** The deployed demo runs **without** `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD`, so anyone can open
+  it. The Basic Auth code stays, off by default, for any deployment that should be private; setting the two variables
+  and redeploying turns it on. Because the site is public and writable, the data is treated as disposable: it is
+  synthetic, deterministic and idempotent to restore (`npm run db:seed` truncates and reloads the same 10,000
+  employees in one transaction), and the load and smoke tests never depend on state they cannot rebuild.
+- **Consequences:** Anyone can create, edit or delete records and can fill the database with rows; there is no rate
+  limiting and no per-user audit. What limits the damage: the app role cannot change the schema or truncate tables,
+  queries are cancelled after 15 s, list pages are capped at 100 rows, and the free database tier has a size limit.
+  A visitor can break the demo's data, not its code or the database. If abuse shows up, switch the password on, or
+  reseed. The smoke test detects whether a site is public or protected and skips the 401 checks on a public one.

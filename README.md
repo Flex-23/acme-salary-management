@@ -8,7 +8,7 @@ reliably at this size.
 
 | | |
 |---|---|
-| **Live demo** | _TODO: add the Vercel URL (access is protected with Basic Auth; credentials are shared separately)_ |
+| **Live demo** | https://acme-salary-management-rust.vercel.app (open to everyone, no credentials needed; the data is synthetic) |
 | **Demo video** | _TODO: add the video link_ |
 
 ## What it answers
@@ -101,20 +101,31 @@ URLs use the **pooler** host (works over IPv4).
 | `DATABASE_URL` | app (local and Vercel) | Transaction pooler, port 6543, user `salary_app.<project-ref>` |
 | `DIRECT_URL` | your machine only, **never on Vercel** | Session pooler, port 5432, user `postgres.<project-ref>`; migrations and seed |
 | `DATABASE_POOL_SIZE` | optional | Connection pool and in-flight query limit, 1 to 20, default 5 |
-| `BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD` | optional | Turn on demo access protection (both, or neither) |
+| `BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD` | optional, **off by default** | Turn on demo access protection (HTTP Basic Auth). Set both, or neither |
 
 ## Deploy to Vercel
 
 1. Import the GitHub repository in Vercel. `vercel.json` already pins the functions to **`fra1`** (the region of
    the Supabase project, `eu-central-1`). Check **Settings, Functions, Function Region** shows Frankfurt.
 2. Set the environment variables above for **Production** (and Preview if you use it): `DATABASE_URL` as
-   `salary_app` on the transaction pooler, `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` with a long random
-   password. Do not set `DIRECT_URL`.
+   `salary_app` on the transaction pooler. Do not set `DIRECT_URL`. Optionally set `BASIC_AUTH_USER` and
+   `BASIC_AUTH_PASSWORD` to put the app behind a password (see below).
 3. Deploy. The build needs no database and no secrets (every route that reads data renders at request time).
-4. Run the smoke test: `npm run smoke -- --url https://<your-app>.vercel.app --user <user> --password <password>`.
+4. Run the smoke test: `npm run smoke -- --url https://<your-app>.vercel.app`. It detects whether the site is
+   public or protected; for a protected one add `--user <user> --password <password>`.
 
 Migrations and the seed are run from your machine against Supabase with `DIRECT_URL` (steps 3 and 5 above), not
-by the deployment.
+by the deployment. Environment variable changes only apply to the next deployment, so redeploy after changing them.
+
+### Demo access: public on purpose, password optional
+
+The live demo is **public so that reviewers can open it directly**. It is writable, but the data is synthetic and
+reproducible: if someone changes or deletes records, `npm run db:seed` restores the original 10,000 employees in one
+command. The app role cannot alter the schema or truncate tables, and every query has a 15 s server-side limit.
+
+If you want a password in front of it (a real deployment, or a demo with sensitive data), set `BASIC_AUTH_USER` and
+`BASIC_AUTH_PASSWORD` in Vercel and redeploy: every page and API route then asks for them, except `/api/health`.
+This is demo protection, not user authentication (ADR 22, 23).
 
 ## Scripts
 
@@ -159,8 +170,9 @@ project:
    routes that invalidate the cache (ADR 9, 17).
 4. **The app queues its own queries and runs as a least-privilege role with a server-side timeout**, because the
    Supabase transaction pooler hung under concurrency and ignores connection-level settings (ADR 19, 21).
-5. **Basic Auth is demo protection, not authentication**: the deployed demo is public and writable, accounts and
-   roles stay out of scope (ADR 22).
+5. **The demo is public on purpose, and Basic Auth is an optional switch, not authentication**: reviewers can open
+   it directly, the data is synthetic and `npm run db:seed` restores it; accounts and roles stay out of scope
+   (ADR 22, 23).
 
 ## Performance
 
