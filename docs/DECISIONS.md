@@ -89,3 +89,36 @@
 - **Decision:** "Hire date is not in the future" is validated by the zod schema, not a `CHECK`
   constraint, because `CURRENT_DATE` is not immutable and constraints that depend on it break dump/restore.
 - **Consequences:** Rows inserted outside the application (SQL console, seed) are not checked by the database.
+
+## 14. Caching: `use cache` + `cacheTag` + `revalidateTag(tag, { expire: 0 })`
+- **Context:** `cacheComponents` is enabled. Insight and filter-option reads are expensive relative to
+  their change rate, and the HR Manager must see their own edits immediately.
+- **Decision:**
+  - Reads go through helper functions with `'use cache'`, `cacheLife('minutes')` and `cacheTag('insights')`
+    (in `src/app/api/_lib/cache.ts`; the Next-specific code stays out of `server/`). `use cache` cannot sit
+    directly in a route handler body, and arguments (the country) become part of the cache key.
+  - Mutations call `revalidateTag('insights', { expire: 0 })`. `updateTag` is the read-your-own-writes API
+    but is Server-Action-only; `revalidateTag(tag, 'max')` would serve stale totals right after an edit.
+    `{ expire: 0 }` makes the next read wait for fresh data.
+  - API routes call `connection()` first, so they run at request time. Without it Next prerendered the
+    parameterless GET routes at build time, which needs a database during `next build` and bakes data in.
+- **Consequences:** Verified against the real database: an insight read is a cache hit (about 5 ms vs about
+  150 ms) and a create/delete is visible in the next summary. With the default in-memory cache handler on
+  serverless hosting, entries rarely survive between requests and invalidation is per instance, so the
+  cache mainly helps on a long-lived server; staleness is bounded by `cacheLife('minutes')` (1 minute).
+  `use cache: remote` or a custom handler is the upgrade path if measured load needs it.
+
+## 15. "Today" is a UTC date supplied by a clock
+- **Decision:** `Clock.today()` returns the current date in UTC (`YYYY-MM-DD`); the services use it for the
+  "hire date is not in the future" rule, and tests inject a fixed clock.
+- **Consequences:** Just after local midnight east of UTC, "today" in the user's calendar is still tomorrow
+  in UTC (for example, a hire on the current local day in UTC+3 is rejected before 03:00 local time).
+  Accepted: it is deterministic and server-timezone independent. A time-zone-aware clock can be added later.
+
+## 16. Route handler error policy
+- **Decision:** Every route is wrapped by `apiRoute`: typed errors map to 400/404/409 in the standard error
+  shape; anything else becomes a generic 500 (`INTERNAL_ERROR`, fixed message) and the cause is logged
+  server-side only. Next.js control-flow errors (such as the prerender bail-out) are re-thrown with
+  `unstable_rethrow`; catching them turned a request-time signal into a 500 during the first build.
+- **Consequences:** Responses never contain stack traces, SQL or driver messages. Non-UUID ids are treated as
+  not found in the service, so every caller is covered. `unstable_rethrow` is marked unstable in Next.js 16.
