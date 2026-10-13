@@ -3,22 +3,23 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { requireEnv } from "./env";
 import { limitConcurrency } from "./limit-concurrency";
+import { parsePoolSize } from "./pool-size";
 import * as schema from "./schema";
 
-const POOL_SIZE = 5;
 const CONNECT_TIMEOUT_SECONDS = 10;
 const IDLE_TIMEOUT_SECONDS = 20;
 
 function createDb() {
+  const poolSize = parsePoolSize(process.env.DATABASE_POOL_SIZE);
   // Supabase pooler runs in transaction mode, which does not support prepared statements.
   const connection = postgres(requireEnv("DATABASE_URL"), {
     prepare: false,
-    max: POOL_SIZE,
+    max: poolSize,
     connect_timeout: CONNECT_TIMEOUT_SECONDS,
     idle_timeout: IDLE_TIMEOUT_SECONDS,
   });
   // Never let postgres.js queue queries on a connection: through the transaction pooler that hangs.
-  const client = limitConcurrency(connection, POOL_SIZE);
+  const client = limitConcurrency(connection, poolSize);
   return drizzle(client, { schema });
 }
 
