@@ -132,6 +132,24 @@ describe("EmployeeInput messages", () => {
   });
 });
 
+describe("text fields and NUL characters", () => {
+  const nul = "a\u0000b";
+
+  it("rejects a NUL character in the text fields of an employee, which Postgres cannot store", () => {
+    for (const field of ["fullName", "jobTitle", "department"] as const) {
+      const result = EmployeeInput.safeParse({ ...valid, [field]: `${nul} x` });
+      expect(result.error?.issues.map((i) => i.path.join("."))).toContain(field);
+      expect(result.error?.issues[0]?.message).toBe("Contains a character that is not allowed");
+    }
+  });
+
+  it("rejects it in the search and the filters of a list query", () => {
+    for (const field of ["search", "department", "jobTitle"]) {
+      expect(ListEmployeesQuery.safeParse({ [field]: nul }).success).toBe(false);
+    }
+  });
+});
+
 describe("EmployeeUpdate", () => {
   it("accepts an empty patch", () => {
     expect(EmployeeUpdate.parse({})).toEqual({});
