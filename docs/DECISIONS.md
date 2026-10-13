@@ -162,3 +162,24 @@
   Throughput is bounded by the pool size, which is what the pool is for. The wrapper only covers `unsafe`
   (Drizzle's query entry point), not `begin`; the app uses no transactions (the seed uses the session pooler
   directly). If postgres.js or Supavisor fix this, the wrapper can be deleted.
+
+## 20. Insights page: sections, URL state and charts
+- **Decision:**
+  - Same rendering pattern as `/employees`: a static shell (title, question, FX note) and one `<Suspense>`
+    boundary per section with a matching skeleton, so a slow section does not hold up the others. Sections read
+    the tagged cached helpers directly (no HTTP hop) and call `connection()` first, so the build never queries
+    the database; a create, edit or delete invalidates them, verified through client-side navigation.
+  - The countries for "by job title" (`titleCountry`, default US) and "distribution" (`distributionCountry`,
+    default all) are separate URL parameters, so each view is shareable and they do not disturb each other.
+    Unknown values fall back to the default instead of failing.
+  - The distribution has 20,000 USD bands and one open-ended top band from 300,000 USD (`to: null`, labelled
+    "$300k+"), so a single outlier cannot produce hundreds of empty bars.
+  - Charts are Recharts with one fixed palette (median blue, average amber), animation off, an SVG title and
+    description, axis titles, tooltips with exact formatted values and, next to each chart, a table of the exact
+    figures (for the histogram, in a collapsible table). Chart scales use whole dollars; every exact amount comes
+    from the same formatted DTOs as the tables.
+  - Each section's subtitle is the question it answers, and the page states that USD figures use fixed
+    reference rates as of 2026-01-01.
+- **Consequences:** The charts draw in the browser (ResponsiveContainer measures its parent), so the server HTML
+  holds the section frames and skeletons, and the figures stream in. The job-title table can be long (about 90
+  titles per country), so it scrolls inside its card with a sticky header.
