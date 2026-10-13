@@ -17,6 +17,7 @@
     "loadtest": "echo not implemented yet"
   },
   "dependencies": {
+    "@next/env": "^16.4.0",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.0",
     "postgres": "^3.4.9",
