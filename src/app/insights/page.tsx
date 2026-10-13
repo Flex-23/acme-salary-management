@@ -3,15 +3,17 @@ import { Suspense } from "react";
 import { FX_RATES_AS_OF } from "@/server/domain/countries";
 import { CountrySection } from "./_components/country-section";
 import { DepartmentSection } from "./_components/department-section";
+import { JobTitleSection } from "./_components/job-title-section";
 import { KpiSection } from "./_components/kpi-section";
 import { InsightSection } from "./_components/section";
 import { KpiSkeleton, SectionBodySkeleton } from "./_components/skeletons";
+import type { RawSearchParams } from "./_lib/search-params";
 
 export const metadata: Metadata = { title: "Insights" };
 
 // The shell is static. Each section below reads the (cached) insight data at request time,
 // so each one streams in behind its own Suspense boundary with a matching skeleton.
-export default function InsightsPage() {
+export default function InsightsPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -27,6 +29,12 @@ export default function InsightsPage() {
       <InsightSection id="by-country" title="Pay by country" question="Where do we pay the most?">
         <Suspense fallback={<SectionBodySkeleton label="pay by country" chartHeight={620} rows={10} />}>
           <CountrySection />
+        </Suspense>
+      </InsightSection>
+
+      <InsightSection id="by-job-title" title="Pay by job title" question="What does each role earn in a given country?">
+        <Suspense fallback={<SectionBodySkeleton label="pay by job title" rows={12} />}>
+          <JobTitleSection searchParams={searchParams} />
         </Suspense>
       </InsightSection>
 
