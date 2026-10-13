@@ -86,6 +86,31 @@ describe("migrations", () => {
     expect(plan).not.toContain("Sort");
   });
 
+  it("create a least-privilege app role with a statement timeout", async () => {
+    const role = await ctx.client.query<{ rolcanlogin: boolean; rolbypassrls: boolean; rolsuper: boolean; rolconfig: string[] }>(
+      `select rolcanlogin, rolbypassrls, rolsuper, rolconfig from pg_roles where rolname = 'salary_app'`,
+    );
+    expect(role.rows).toEqual([
+      { rolcanlogin: true, rolbypassrls: true, rolsuper: false, rolconfig: ["statement_timeout=15s"] },
+    ]);
+  });
+
+  it("let the app role read and write employees but not change the schema or empty the table", async () => {
+    const can = async (privilege: string, table: string) => {
+      const result = await ctx.client.query<{ allowed: boolean }>(
+        `select has_table_privilege('salary_app', '${table}', '${privilege}') as allowed`,
+      );
+      return result.rows[0]?.allowed;
+    };
+    for (const privilege of ["SELECT", "INSERT", "UPDATE", "DELETE"]) expect(await can(privilege, "employees")).toBe(true);
+    expect(await can("TRUNCATE", "employees")).toBe(false);
+    expect(await can("SELECT", "countries")).toBe(true);
+    expect(await can("INSERT", "countries")).toBe(false);
+    expect(await can("UPDATE", "countries")).toBe(false);
+    const schema = await ctx.client.query<{ allowed: boolean }>(`select has_schema_privilege('salary_app', 'public', 'CREATE') as allowed`);
+    expect(schema.rows[0]?.allowed).toBe(false);
+  });
+
   it("reject a zero salary", async () => {
     await expect(
       ctx.db.insert(employees).values({ ...validEmployee, salaryMinor: 0 }),

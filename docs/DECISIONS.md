@@ -183,3 +183,23 @@
 - **Consequences:** The charts draw in the browser (ResponsiveContainer measures its parent), so the server HTML
   holds the section frames and skeletons, and the figures stream in. The job-title table can be long (about 90
   titles per country), so it scrolls inside its card with a sticky header.
+
+## 21. A dedicated app role carries the server-side statement timeout
+- **Context:** The limiter (ADR 19) frees a slot only when its query returns. A query that never returns would
+  hold a slot for good, and five of them would freeze the app. Supabase's poolers ignore connection-level
+  settings: `options=-c statement_timeout=...` in the URL and postgres.js's `connection` option were both
+  dropped (checked on the transaction and the session pooler). `SET` per connection is meaningless when
+  connections are multiplexed, and `SET LOCAL` needs a transaction (three round trips per query, painful at
+  about 100 ms from Baghdad). The `postgres` role already has a 2-minute timeout, far too long for the app.
+- **Decision:** Migration `0004` creates the role `salary_app` (LOGIN, BYPASSRLS, `statement_timeout = 15s`)
+  with only SELECT/INSERT/UPDATE/DELETE on `employees` and SELECT on `countries`. The app connects as that role
+  through the transaction pooler (user `salary_app.<project-ref>`). Migrations and the seed keep using
+  `postgres` through `DIRECT_URL`, so the 15 s limit never touches them. The role is created without a password
+  (a secret does not belong in a migration); the password is set once with `ALTER ROLE`. BYPASSRLS keeps the
+  "RLS on every table, no policies" rule intact.
+- **Consequences:** A slow query is cancelled by the server (SQLSTATE 57014), its slot is freed, and the API
+  answers the standard 500 without leaking the message; the next request works (`npm run check:timeout` against
+  the real database, plus a route test). Extra setup step: set the role's password. The app can no longer
+  truncate or alter tables. A timeout does not cover a connection that stalls at the protocol level; the
+  limiter's no-queue rule is what prevents that case. 15 s is far above the slowest legitimate query (well
+  under 1 s); raise it if reports ever need it.

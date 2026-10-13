@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed/cli.ts",
-    "loadtest": "echo not implemented yet"
+    "loadtest": "echo not implemented yet",
+    "check:timeout": "tsx scripts/check-statement-timeout.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

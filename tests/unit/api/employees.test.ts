@@ -167,4 +167,24 @@ describe("unexpected failures", () => {
     expect(log).toHaveBeenCalled();
     log.mockRestore();
   });
+
+  it("turn a database statement timeout into the standard 500, then serve the next request normally", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const timeout = Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" });
+    const realList = harness.services!.employees.list.bind(harness.services!.employees);
+    harness.services!.employees.list = () => Promise.reject(timeout);
+
+    const failed = await list(get("/api/employees"));
+    expect(failed.status).toBe(500);
+    const body = await failed.json();
+    expect(body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Something went wrong" } });
+    expect(JSON.stringify(body)).not.toContain("statement timeout");
+    expect(log).toHaveBeenCalledWith("Unhandled API error", timeout);
+
+    harness.services!.employees.list = realList;
+    const next = await list(get("/api/employees?pageSize=2"));
+    expect(next.status).toBe(200);
+    expect((await next.json()).data).toHaveLength(2);
+    log.mockRestore();
+  });
 });
