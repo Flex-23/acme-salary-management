@@ -18,7 +18,7 @@ export const columns = column.columns([
       <>
         <span className="font-medium">{info.getValue()}</span>
         {/* The email column is hidden on narrower screens, so it moves under the name there. */}
-        <span className="block text-xs text-muted-foreground lg:hidden">{info.row.original.email}</span>
+        <span className="block text-xs text-muted-foreground xl:hidden">{info.row.original.email}</span>
       </>
     ),
   }),
