@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FX_RATES_AS_OF } from "@/server/domain/countries";
+import { CountrySection } from "./_components/country-section";
 import { KpiSection } from "./_components/kpi-section";
-import { KpiSkeleton } from "./_components/skeletons";
+import { InsightSection } from "./_components/section";
+import { KpiSkeleton, SectionBodySkeleton } from "./_components/skeletons";
 
 export const metadata: Metadata = { title: "Insights" };
 
@@ -16,9 +18,16 @@ export default function InsightsPage() {
         <p className="text-sm text-muted-foreground">How does the organisation pay people?</p>
         <p className="text-xs text-muted-foreground">USD figures use fixed reference rates as of {FX_RATES_AS_OF}.</p>
       </div>
+
       <Suspense fallback={<KpiSkeleton />}>
         <KpiSection />
       </Suspense>
+
+      <InsightSection id="by-country" title="Pay by country" question="Where do we pay the most?">
+        <Suspense fallback={<SectionBodySkeleton label="pay by country" chartHeight={620} rows={10} />}>
+          <CountrySection />
+        </Suspense>
+      </InsightSection>
     </div>
   );
 }
