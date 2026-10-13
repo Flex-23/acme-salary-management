@@ -37,6 +37,7 @@ export const columns = column.columns([
   column.accessor((row) => row.salaryUsd.amountMinor, {
     id: "salaryUsd",
     header: SALARY,
+    sortDescFirst: false, // numbers default to descending first; every column starts ascending
     cell: (info) => {
       const { salary, salaryUsd } = info.row.original;
       return (

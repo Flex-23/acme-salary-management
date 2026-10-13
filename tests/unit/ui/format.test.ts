@@ -24,5 +24,6 @@ describe("formatDate", () => {
   it("formats an ISO date without shifting it across time zones", () => {
     expect(formatDate("2024-03-01")).toBe("1 Mar 2024");
     expect(formatDate("2026-01-31")).toBe("31 Jan 2026");
+    expect(formatDate("2021-09-11")).toBe("11 Sep 2021");
   });
 });

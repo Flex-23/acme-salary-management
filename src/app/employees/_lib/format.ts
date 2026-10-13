@@ -1,5 +1,5 @@
 const numbers = new Intl.NumberFormat("en-US");
-const dates = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const months = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
 
 export function rangeLabel({ page, pageSize, total }: { page: number; pageSize: number; total: number }): string {
   if (total === 0) return "No results";
@@ -10,5 +10,6 @@ export function rangeLabel({ page, pageSize, total }: { page: number; pageSize: 
 
 /** "2024-03-01" -> "1 Mar 2024". Dates are calendar dates, so no time zone shifting. */
 export function formatDate(isoDate: string): string {
-  return dates.format(new Date(`${isoDate}T00:00:00Z`));
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  return `${date.getUTCDate()} ${months.format(date)} ${date.getUTCFullYear()}`;
 }

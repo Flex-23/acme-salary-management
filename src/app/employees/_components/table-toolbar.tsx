@@ -14,7 +14,7 @@ const asOption = (value: string) => ({ value, label: value });
 type Props = {
   params: TableParams;
   filterOptions: FilterOptions;
-  onChange: (patch: Partial<TableParams>) => void;
+  onChange: (patch: Partial<TableParams>, options?: { replace?: boolean }) => void;
   onClear: () => void;
   /** Right-aligned actions, such as "Add employee". */
   actions?: ReactNode;
@@ -23,7 +23,7 @@ type Props = {
 export function TableToolbar({ params, filterOptions, onChange, onClear, actions }: Props) {
   return (
     <div role="search" className="flex flex-wrap items-center gap-2">
-      <SearchInput value={params.search ?? ""} onSearch={(search) => onChange({ search: search || undefined })} />
+      <SearchInput value={params.search ?? ""} onSearch={(search) => onChange({ search: search || undefined }, { replace: true })} />
       <FilterSelect
         label="Filter by country"
         allLabel="All countries"

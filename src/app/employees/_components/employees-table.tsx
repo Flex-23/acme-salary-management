@@ -1,7 +1,7 @@
 "use client";
 
 import { functionalUpdate, useTable } from "@tanstack/react-table";
-import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -81,7 +81,7 @@ export function EmployeesTable({ rows, sort, onSortChange, onEdit, onDelete, emp
                   </TableHead>
                 );
               })}
-              <TableHead className="w-28">
+              <TableHead className="w-20">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -104,11 +104,24 @@ export function EmployeesTable({ rows, sort, onSortChange, onEdit, onDelete, emp
                 ))}
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(row.original)}>
-                      Edit<span className="sr-only"> {row.original.fullName}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit ${row.original.fullName}`}
+                      title="Edit"
+                      onClick={() => onEdit(row.original)}
+                    >
+                      <PencilIcon aria-hidden />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => onDelete(row.original)}>
-                      Delete<span className="sr-only"> {row.original.fullName}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-destructive"
+                      aria-label={`Delete ${row.original.fullName}`}
+                      title="Delete"
+                      onClick={() => onDelete(row.original)}
+                    >
+                      <Trash2Icon aria-hidden />
                     </Button>
                   </div>
                 </TableCell>
