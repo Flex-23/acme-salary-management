@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:generate": "echo not implemented yet",
+    "db:migrate": "echo not implemented yet",
+    "db:seed": "echo not implemented yet",
+    "loadtest": "echo not implemented yet"
   },
   "dependencies": {
     "next": "16.4.0",
