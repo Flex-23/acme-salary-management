@@ -58,7 +58,7 @@ export function EmployeesView({ rows, page, params, filterOptions, ignoredInvali
           rows={rows}
           sort={params.sort}
           onSortChange={(sort) => navigation.update({ sort })}
-          onEdit={() => undefined}
+          onEdit={(employee) => setForm({ open: true, employee })}
           onDelete={() => undefined}
           emptyState={emptyState}
         />
