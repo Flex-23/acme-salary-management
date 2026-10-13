@@ -121,7 +121,7 @@ GET    /api/health                           # app + DB check
 ## 6. Performance & resilience rules
 - DB client: connect via **Supabase pooler** (`DATABASE_URL`, transaction mode, port 6543)
   with `prepare: false` and a small pool (`max` ≈ 5). Reuse one client per process
-  (global singleton in dev to survive HMR). `DIRECT_URL` (port 5432) only for migrations/seed.
+  (global singleton in dev to survive HMR). `DIRECT_URL` (Session pooler, port 5432; the direct host is IPv6-only on the free plan) only for migrations/seed.
 - Server-side pagination, filtering and sorting. Never send all 10k rows to the client.
 - Insights are cached with the installed Next.js caching API and a cache **tag**;
   every employee mutation **invalidates** that tag.
@@ -157,5 +157,5 @@ GET    /api/health                           # app + DB check
 ## 9. Environment
 ```
 DATABASE_URL=   # Supabase pooler (transaction mode, :6543) — used by the app
-DIRECT_URL=     # Supabase direct connection (:5432) — migrations & seed only
+DIRECT_URL=     # Supabase Session pooler (:5432 on the pooler host) — migrations & seed only
 ```
