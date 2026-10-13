@@ -23,6 +23,7 @@ const asNullableNumber = (expr: SQL) => sql<number | null>`${expr}`.mapWith(Numb
 
 /** Rounding happens on numeric (half away from zero), never on double precision. */
 const rounded = (expr: SQL) => asNumber(sql`round((${expr})::numeric)`);
+// percentile_cont works on double precision: exact for salaries up to 2^53 minor units.
 const median = (value: SQL) => sql`percentile_cont(0.5) within group (order by (${value})::double precision)`;
 
 function statsColumns(value: SQL) {

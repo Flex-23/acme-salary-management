@@ -74,3 +74,18 @@
 - **Consequences:** The first page is served from the index, and ordering is identical in tests and
   production. Names sort by code point, so non-ASCII letters are not locale-aware. The ORDER BY in
   the repository and the index definition must stay in sync.
+
+## 12. Rounding of USD amounts
+- **Context:** Per-employee USD values and SQL aggregates are computed in different places.
+- **Decision:** Aggregates (min, max, average, median, totals) are computed on exact numerics in SQL
+  and rounded once, half away from zero. Per-employee USD amounts are rounded half to even in the domain.
+  Sorting uses the unrounded value.
+- **Consequences:** Min, max, average and median can differ from the same figure computed from rounded
+  per-row values by at most 1 cent. Total payroll is a sum, so it can differ by up to half a cent per
+  employee (about 50 USD at 10,000 employees) in the worst case; in practice the errors largely cancel.
+  Acceptable for reporting; no figure is used for payments.
+
+## 13. Hire-date rule lives in the domain only
+- **Decision:** "Hire date is not in the future" is validated by the zod schema, not a `CHECK`
+  constraint, because `CURRENT_DATE` is not immutable and constraints that depend on it break dump/restore.
+- **Consequences:** Rows inserted outside the application (SQL console, seed) are not checked by the database.
