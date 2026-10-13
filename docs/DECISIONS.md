@@ -137,3 +137,13 @@
 - **Consequences:** Every view is shareable and back-button friendly. An out-of-range page redirects to the
   last page; an invalid URL falls back to defaults with a notice. The shared zod schema validates the form in
   the browser, so the client bundle includes zod and the domain money/country modules (small, pure).
+
+## 18. Light theme only (dark theme is future work)
+- **Context:** The page background was a translucent colour, so with an OS in dark mode the browser's dark
+  canvas showed through and text became unreadable.
+- **Decision:** This version is light only. `html` declares `color-scheme: light` (so form controls,
+  scrollbars and the canvas stay light) and `html`/`body` use one opaque background (`--page`). The
+  muted text colour is darker than shadcn's default so secondary text meets 4.5:1 on that background.
+  The generated `.dark` variables are class-based and never activated.
+- **Consequences:** The app looks the same whatever the OS preference. Verified with `prefers-color-scheme:
+  dark` emulation. A real dark theme needs the `.dark` palette checked for contrast and a user switch.
