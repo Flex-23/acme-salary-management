@@ -142,6 +142,8 @@ GET    /api/health                           # app + DB check
 - Before every commit run: `npm run typecheck && npm run lint && npm test`.
 - Run `npm test` directly (never piped through grep or other tools) and check its exit code
   before committing.
+- Write and edit source files with the editor tools, never through shell echo/heredoc
+  (shell quoting corrupted the LIKE-escape regex).
 - Keep functions small and named for intent. No `any`. No dead code or commented-out code.
 - Do **not** add dependencies beyond section 2 without asking first.
 - If a requirement is ambiguous, **stop and ask** — do not guess.
