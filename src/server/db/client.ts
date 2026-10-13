@@ -1,15 +1,21 @@
 import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { requireEnv } from "./env";
 import * as schema from "./schema";
 
 const POOL_SIZE = 5;
+const CONNECT_TIMEOUT_SECONDS = 10;
+const IDLE_TIMEOUT_SECONDS = 20;
 
 function createDb() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
   // Supabase pooler runs in transaction mode, which does not support prepared statements.
-  const client = postgres(url, { prepare: false, max: POOL_SIZE });
+  const client = postgres(requireEnv("DATABASE_URL"), {
+    prepare: false,
+    max: POOL_SIZE,
+    connect_timeout: CONNECT_TIMEOUT_SECONDS,
+    idle_timeout: IDLE_TIMEOUT_SECONDS,
+  });
   return drizzle(client, { schema });
 }
 
