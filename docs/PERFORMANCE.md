@@ -11,9 +11,11 @@ Reproduce everything with the commands in [How to reproduce](#how-to-reproduce).
   (see [Query plans](#query-plans)). What dominates is the round trip from this machine (Baghdad) to the
   database (Frankfurt): about **116 ms per query** (median).
 - **Insight endpoints are cache hits** (2 to 7 ms server time, 600 to 1,150 req/s). Uncached, database-backed
-  endpoints are bounded by `pool size / round trip`: 15 to 30 req/s here with the default pool of 5. Both
-  the latency and the throughput limit would mostly disappear when the app runs next to the database (see
-  [what we did not measure](#known-limits)).
+  endpoints are bounded by `pool size / round trip`: 15 to 30 req/s here with the default pool of 5.
+- **Deployed in `fra1`, the app-to-database hop disappears** (a database-backed request costs the same as a
+  cached one), but from Baghdad every request to the deployment takes about 250 ms because of the distance to
+  Vercel itself. Details, and why the comparison changed two hops, in
+  [Measured from Vercel](#measured-from-vercel-fra1).
 - Found and fixed along the way: a pooler hang under concurrency (ADR 19), a missing server-side timeout
   (ADR 21), a sequential scan on the hire-date sort, and NUL characters that turned into a 500.
 
@@ -192,34 +194,90 @@ the load test sends the same kinds of input to the running server (170 rejection
 
 ## Measured from Vercel (fra1)
 
-_TODO: fill in after the first deployment. Everything above includes about 116 ms of Baghdad to Frankfurt
-latency on every query; this section is the same app next to its database._
-
-Run it gently, so a public demo is not hammered (a single connection pair and at most 5 requests per second in
-total, 10 s per scenario). The access credentials go through the environment, not the command line history:
+The same load, run twice from the same machine (Baghdad): once against the production deployment
+(https://acme-salary-management-rust.vercel.app, functions in `fra1`, next to the Supabase database) and once against
+the local production build. Same code, same database, same gentle load (2 connections, at most 5 requests per second
+in total, 20 s per scenario, so 100 requests each; 65 for the pages). **Zero 5xx and zero errors in both runs.**
 
 ```bash
-BASIC_AUTH_USER='<user>' BASIC_AUTH_PASSWORD='<password>' \
-  npm run loadtest -- --base-url https://<your-app>.vercel.app --connections 2 --rate 5 --duration 10 \
-  --json .loadtest/vercel-fra1.json
+npm run loadtest -- --base-url https://acme-salary-management-rust.vercel.app \
+  --connections 2 --rate 5 --duration 20 --cache-probe --json .loadtest/vercel-fra1.json
+npm run loadtest -- --base-url http://localhost:3000 --connections 2 --rate 5 --duration 20   # the local build
 ```
 
-Add `--cache-probe` only if you accept one temporary test employee being created and deleted on the deployed
-database. For a one-off round-trip figure from the same machine, run `npm run smoke -- --url <url> --user <u>
---password <p>`: it prints the time of each request.
+### Two hops changed, not one
 
-| Scenario | Conns | req/s | p50 ms | p95 ms | p99 ms | 5xx |
-|---|---:|---:|---:|---:|---:|---:|
-| _TODO_ | | | | | | |
+The load generator is the same machine, but it does not reach the app the same way, so the comparison does not
+isolate the app-to-database hop:
+
+| | load generator to app | app to database |
+|---|---|---|
+| Local build | `localhost`, about 0 ms | Baghdad to Frankfurt, about 116 ms per query |
+| Vercel, `fra1` | Baghdad to Vercel, across the internet | `fra1` to `eu-central-1`, the same region |
+
+The Vercel run therefore *adds* the internet path to the app and *removes* the intercontinental hop to the database.
+Read the table with that in mind.
+
+### Results (p50 / p95, in ms)
+
+| Scenario | Local build | Vercel `fra1` |
+|---|---:|---:|
+| list: default | 200 / 229 | 258 / 302 |
+| list: search + filter + sort | 201 / 223 | 258 / 295 |
+| list: deep page | 241 / 332 | 297 / 410 |
+| get by id | 187 / 203 | 256 / 336 |
+| insights: summary (cached) | 4 / 19 | 282 / 325 |
+| insights: by country (cached) | 3 / 12 | 318 / 403 |
+| insights: by job title (cached) | 5 / 18 | 333 / 567 |
+| insights: by department (cached) | 3 / 20 | 311 / 350 |
+| insights: distribution (cached) | 3 / 22 | 277 / 321 |
+| meta: filters (cached) | 3 / 21 | 254 / 326 |
+| pages: `/employees` and `/insights` | 174 / 283 | 571 / 927 |
+| mixed browsing session | 172 / 239 | 265 / 552 |
+| hostile input (4xx expected) | 6 / 377 | 247 / 402 |
+
+### What this shows
+
+- **The app-to-database hop is no longer visible.** On Vercel a database-backed request (get by id 256, list 258)
+  costs the same as a cached one that never touches the database (filters 254, summary 282): the difference is
+  within the noise of the measurement (a few tens of milliseconds at most). Locally the same difference is
+  about 185 to 235 ms (get by id 187 against filters 3), which is the 116 ms round trip plus the pooler and
+  the limiter. That is the "only the database hop changes" effect, measured.
+- **From Baghdad, the deployed app is not faster for the user; it is network-bound.** Any request to Vercel,
+  even a cached one, takes about 250 ms at p50 here. That is the distance between this machine and Vercel (more
+  than twice the 116 ms database round trip; the path through Vercel's edge was not broken down), and nothing the
+  app can change. The local build looks faster for most requests only because the generator sits on the same
+  machine as the app; real users of the local build would not.
+- **A user near Frankfurt would see roughly the small remainder** (a few milliseconds to the app plus the same few
+  to the database). That is an expectation, not a measurement: no load was generated from Europe.
+- **The pages cost more than the API** (571 ms against about 260): a page response is streamed and carries more
+  bytes, which costs extra round trips over a long path. Not isolated.
+- **Cache hit against miss cannot be told apart from here.** One miss right after a write and the following hits
+  (p50): summary 430 against 283 ms, by country 309 against 311, by department 310 against 309, distribution 271
+  against 270. When the database is a few milliseconds away and the network costs 250 ms, the cache saves the
+  database work, not user-visible time. (On serverless the cache is also per instance, ADR 14.)
+- **Capacity was not measured on purpose.** At 5 requests per second this says nothing about how many requests the
+  deployment can serve. The local limit (15 to 30 req/s, `pool size / round trip`) came from the 116 ms hop; with
+  the hop in the low milliseconds the same pool of 5 should serve many times more, but that is expected, not
+  measured, and a stress run against the public demo was left out deliberately.
+- Only 100 requests per scenario at 5 req/s: the p95 and p99 of a few outliers move a lot between runs (for
+  example "by job title", whose payload is the largest of the insights).
+
+The cache probe created one temporary employee on the production database and deleted it again; no probe row was
+left behind. The public demo is writable by design (ADR 23), so run it only when you accept that. For a quick
+single-request timing of a deployment without any load, `npm run smoke -- --url <url>` prints the time of each
+request.
 
 ## Known limits
 
 - **Throughput of uncached, database-backed endpoints is bounded by `pool / round trip`** (15 to 30 req/s here).
   Fine for the intended single HR user (a page needs two to four queries), not for a crowd.
-- **Not measured:** the app running next to the database, a Vercel deployment, or a larger plan. The results
-  here include 116 ms of intercontinental latency on every query; a same-region deployment would be far
-  faster, but that is an expectation, not a measurement.
-- **The load generator shares the machine** with the app, which lowers the cached-endpoint numbers.
+- **Not measured:** the capacity of the deployment (only a gentle, rate-capped run was made), users near
+  Frankfurt, or a larger plan. The main results above include 116 ms of intercontinental latency on every query;
+  a same-region deployment removes that hop (measured in the Vercel section), but its throughput is an
+  expectation, not a measurement.
+- **In the local runs the load generator shares the machine** with the app, which lowers the cached-endpoint
+  numbers; in the Vercel run it does not.
 - **Free-tier pooler.** The limits of its connection pool were not measured; with `salary_app` and 5
   connections nothing was refused.
 - **Sorting by USD salary** costs about 27 ms and scales with the table (it sorts all rows).

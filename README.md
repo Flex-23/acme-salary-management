@@ -179,8 +179,10 @@ project:
 Measured on a production build against the real database from Baghdad (about 116 ms per query to Frankfurt):
 zero 5xx under 50 concurrent connections; cached insight endpoints around 1,000 req/s (p95 under 100 ms);
 database-backed endpoints 15 to 30 req/s, bounded by round trips, not by the database (queries run in 0.1 to 60 ms
-on the server). Search, filters and sorts use indexes; one sequential scan was found and fixed. Full results, query
-plans, cache timings and the 10x/100x plan: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+on the server). Search, filters and sorts use indexes; one sequential scan was found and fixed. On Vercel (`fra1`) a
+database-backed request costs the same as a cached one, so the database hop is gone; from Baghdad every request to
+the deployment still takes about 250 ms because of the distance to Vercel itself. Full results, query plans, cache
+timings and the 10x/100x plan: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 ## AI workflow
 
