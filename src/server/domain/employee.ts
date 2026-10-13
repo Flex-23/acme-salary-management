@@ -43,23 +43,28 @@ function makeFields(today: string) {
 
 type Ctx = z.RefinementCtx;
 
-function salaryToMinor(salary: number, countryCode: string, ctx: Ctx): number | typeof z.NEVER {
-  const country = getCountry(countryCode);
-  const fail = (message: string) => {
-    ctx.issues.push({ code: "custom", message, input: salary, path: ["salary"] });
-    return z.NEVER;
-  };
+export type SalaryCheck = { ok: true; minor: number } | { ok: false; message: string };
 
+/** Converts a salary in major units to minor units, enforcing the currency's decimals and the cap. */
+export function checkSalary(salary: number, countryCode: string): SalaryCheck {
+  const country = getCountry(countryCode);
   let minor: number;
   try {
     minor = toMinor(salary, country.currencyExponent);
   } catch {
-    return fail(`Salary must have at most ${country.currencyExponent} decimal places`);
+    return { ok: false, message: `Salary must have at most ${country.currencyExponent} decimal places` };
   }
   if (toUsdMinor(minor, country) > MAX_SALARY_USD_MINOR) {
-    return fail("Salary exceeds the maximum allowed amount");
+    return { ok: false, message: "Salary exceeds the maximum allowed amount" };
   }
-  return minor;
+  return { ok: true, minor };
+}
+
+function salaryToMinor(salary: number, countryCode: string, ctx: Ctx): number | typeof z.NEVER {
+  const check = checkSalary(salary, countryCode);
+  if (check.ok) return check.minor;
+  ctx.issues.push({ code: "custom", message: check.message, input: salary, path: ["salary"] });
+  return z.NEVER;
 }
 
 export function makeEmployeeSchemas({ today }: { today: string }) {

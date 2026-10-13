@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkSalary,
   ListEmployeesQuery,
   makeEmployeeSchemas,
   MAX_PAGE_SIZE,
@@ -87,6 +88,22 @@ describe("EmployeeInput", () => {
 
   it("rejects missing required fields", () => {
     expect(EmployeeInput.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("checkSalary", () => {
+  it("converts a valid amount to minor units", () => {
+    expect(checkSalary(72000.5, "DE")).toEqual({ ok: true, minor: 7_200_050 });
+    expect(checkSalary(6_500_000, "JP")).toEqual({ ok: true, minor: 6_500_000 });
+  });
+
+  it("explains too many decimals for the currency", () => {
+    expect(checkSalary(1.5, "JP")).toEqual({ ok: false, message: "Salary must have at most 0 decimal places" });
+    expect(checkSalary(1.005, "US")).toEqual({ ok: false, message: "Salary must have at most 2 decimal places" });
+  });
+
+  it("explains an amount above the cap", () => {
+    expect(checkSalary(10_000_001, "US")).toEqual({ ok: false, message: "Salary exceeds the maximum allowed amount" });
   });
 });
 
