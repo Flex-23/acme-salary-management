@@ -203,3 +203,21 @@
   truncate or alter tables. A timeout does not cover a connection that stalls at the protocol level; the
   limiter's no-queue rule is what prevents that case. 15 s is far above the slowest legitimate query (well
   under 1 s); raise it if reports ever need it.
+
+## 22. Demo access protection, not user authentication
+- **Context:** The demo is deployed on a public URL and the app can write (create, edit, delete). Anyone who
+  finds the link could change the data. Authentication, roles and accounts stay out of scope (CLAUDE.md,
+  REQUIREMENTS.md); this is a stop-gap for the demo, not a feature.
+- **Decision:** HTTP Basic Auth in front of the whole app, in `src/proxy.ts` (Next.js 16 renamed
+  `middleware` to `proxy`; it runs on the Node.js runtime). It is active only when `BASIC_AUTH_USER` and
+  `BASIC_AUTH_PASSWORD` are both set, so local development, tests and CI are unaffected. Every page and API
+  route is covered except `/api/health` (for uptime monitors) and Next.js's static assets (JavaScript, CSS and
+  images, which hold no data). The comparison is constant time (SHA-256 digests compared with
+  `timingSafeEqual`, both user and password always checked), failures all give the same 401 with the
+  standard error shape, and one variable set without the other is a 503 for every request, so a typo can never
+  leave the app open. The logic lives in `src/server/http/basic-auth.ts` (framework-free, unit-tested,
+  including a test that pins the timing behaviour); `proxy.ts` only maps the result to Next.js.
+- **Consequences:** One shared credential, no accounts, no logout, no per-user audit trail, and no lock-out after
+  repeated failures. Basic Auth is only safe over HTTPS (Vercel provides it). The password must be long and
+  random, and rotating it means changing the environment variable and redeploying. Real authentication would
+  replace this file, not extend it.
