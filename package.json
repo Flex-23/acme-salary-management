@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "echo not implemented yet",
+    "db:seed": "tsx src/server/db/seed/cli.ts",
     "loadtest": "echo not implemented yet"
   },
   "dependencies": {
