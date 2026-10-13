@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm ls *)",
+      "Bash(tasklist)",
+      "Bash(npm i *)",
+      "Bash(npm uninstall *)",
+      "Bash(npm test *)"
+    ]
+  }
+}
